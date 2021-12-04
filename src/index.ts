@@ -99,7 +99,7 @@ function applyRepl([pat, repl]: Replacement): boolean{
           let gridJ = cornerJ + replJ
             ;(grid[gridI] ??= [])[gridJ] = apply(grid[gridI]?.[gridJ] ?? "", repl[replI][replJ] ?? "")
         }
-      // printGrid()
+      printGrid()
       return true
     }
   return false
