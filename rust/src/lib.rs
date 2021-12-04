@@ -7,18 +7,18 @@ const WILD: char = '_';
 const BLANK: char = '.';
 
 #[derive(Default, Debug)]
-struct Grid {
-  cells: HashMap<Pos, Cell>,
-  region: Region,
+pub struct Grid {
+  pub cells: HashMap<Pos, Cell>,
+  pub region: Region,
 }
 
 #[derive(Default, Debug)]
-struct Region {
-  set: bool,
-  x_min: isize,
-  x_max: isize,
-  y_min: isize,
-  y_max: isize,
+pub struct Region {
+  pub set: bool,
+  pub x_min: isize,
+  pub x_max: isize,
+  pub y_min: isize,
+  pub y_max: isize,
 }
 
 impl Region {
@@ -53,13 +53,13 @@ fn apply_repl(cell: &mut Cell, repl: Cell) -> Cell {
 }
 
 #[derive(Debug)]
-struct Rule {
-  pat: Grid,
-  pat_init: Region,
-  repl: Grid,
+pub struct Rule {
+  pub pat: Grid,
+  pub pat_init: Region,
+  pub repl: Grid,
 }
 
-fn apply_rule(grid: &mut Grid, rule: &Rule) -> bool {
+pub fn apply_rule(grid: &mut Grid, rule: &Rule) -> bool {
   for ox in grid.region.x_min - rule.pat_init.x_min..=grid.region.x_max - rule.pat_init.x_max {
     'search: for oy in
       grid.region.y_min - rule.pat_init.y_min..=grid.region.y_max - rule.pat_init.y_max
@@ -89,13 +89,13 @@ fn apply_rule(grid: &mut Grid, rule: &Rule) -> bool {
 }
 
 #[derive(Debug)]
-enum Statement {
+pub enum Statement {
   Rule(Rule),
   Loop(Vec<Statement>),
   Debug,
 }
 
-fn parse_program(input: &str) -> Result<(Grid, Vec<Statement>), &'static str> {
+pub fn parse_program(input: &str) -> Result<(Grid, Vec<Statement>), &'static str> {
   let mut input = input.chars().peekable();
   while input.peek() == Some(&'\n') {
     input.next();
@@ -263,7 +263,7 @@ fn skip_whitespace(input: &mut std::iter::Peekable<std::str::Chars>) {
   }
 }
 
-fn exec(grid: &mut Grid, statements: &Vec<Statement>) -> bool {
+pub fn exec(grid: &mut Grid, statements: &Vec<Statement>) -> bool {
   let mut cont = false;
   for statement in statements {
     match statement {
@@ -279,7 +279,7 @@ fn exec(grid: &mut Grid, statements: &Vec<Statement>) -> bool {
   cont
 }
 
-fn print_grid(grid: &Grid) {
+pub fn print_grid(grid: &Grid) {
   for y in grid.region.y_min..=grid.region.y_max {
     for x in grid.region.x_min..=grid.region.x_max {
       let cell = grid.cells.get(&(x, y)).copied().unwrap_or((BLANK, BLANK));
@@ -288,11 +288,4 @@ fn print_grid(grid: &Grid) {
     print!("\n")
   }
   print!("\n")
-}
-
-fn main() {
-  let (mut grid, statements) = parse_program(include_str!("../../examples/cgol.quilt")).unwrap();
-  print_grid(&grid);
-  exec(&mut grid, &statements);
-  print_grid(&grid);
 }

@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2019",
+    "moduleResolution": "node",
+    "module": "esnext",
+    "composite": true,
+    "types": [],
+  },
+}
