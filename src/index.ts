@@ -2,7 +2,7 @@
 console.clear()
 
 import fs from "fs"
-const input = fs.readFileSync("./example.quilt", "utf8")
+const input = fs.readFileSync(process.argv[2], "utf8")
 
 const grids = input.replace(/^\n+|\n+$/g, "").split(/\n\s*([[\]])(?=\n|$)|(?:\n\s*){2,}/).map(x => x?.trim()).filter(x => x)
   .map(x => x.split("\n").map(x => x.trim().split(" ")))
@@ -68,7 +68,9 @@ run(replacementsGrouped)
 function run(commands: ReplacementsGrouped){
   let cont = false
   for(const command of commands)
-    if(command === ".") printGrid()
+    if(command === ".") {
+      if(cont) printGrid()
+    }
     else if("loop" in command) while(run(command.loop)) cont ||= true
     else cont = applyRepl(command) || cont
   return cont
