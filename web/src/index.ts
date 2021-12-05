@@ -14,37 +14,40 @@ function tick(){
   canvas.height = window.innerHeight
   ctx.fillStyle = "#000"
   // let b: Point[][] = [[[100, 100], [500, 100], [500, 500], [100, 500]]] // getLetter("B")
-  let a = getLetter("8")
-  // let b = getLetter("")
-  // for(let x of a)
-  //   drawPolygon(x)
-  // for(let x of b)
-  //   drawPolygon(x)
+  let a = getLetter("&")
+  let b = getLetter("@")
+  for(let x of a)
+    drawPolygon(x)
+  for(let x of b)
+    drawPolygon(x)
   let asp = polygonToBsp(a)
-  // for(let x of bspEdges(asp?.right ?? null))
-  //   drawPolygon(x)
-  drawBsp(asp, [])
+  let bsp = polygonToBsp(b)
+  let csp = addEdgesToBsp(null, [...diff(asp, bsp)])
+  ctx.lineWidth = 5
+  for(let x of bspEdges(csp))
+    drawPolygon(x)
+  ctx.lineWidth = 1
+  for(const x of bspToConvexPolygons(csp, []))
+    for(let i = 1; i < x.length - 1; i++)
+      drawPolygon([x[0], x[i], x[i + 1]])
+  for(let i = 0; i < 10000; i++) {
+    let point = [Math.random() * 600, Math.random() * 800] as const
+    if(pointInsideBsp(csp, point)) {
+      ctx.fillStyle = "#000"
+      ctx.fillRect(...point, 1, 1)
+    }
+  }
   // drawBsp(asp?.right ?? null, trimConvex([asp!.segments.map(x => x)].flat()as Edge[]))
-  // let bsp = polygonToBsp(b)
   // console.log(bsp)
-  // for(let i = 0; i < 10000; i++) {
-  //   let point = [Math.random() * 600, Math.random() * 800] as const
-  //   if(pointInsideBsp(asp, point)) {
-  //     ctx.fillStyle = "#000"
-  //     ctx.fillRect(...point, 1, 1)
-  //   }
-  // }
-  // let csp = addEdgesToBsp(null, [...diff(a, asp, b, bsp)])
   // drawBsp(csp, [])
 }
 
-function drawBsp(bsp: Bsp | undefined, edges: Edge[]){
+function* bspToConvexPolygons(bsp: Bsp, edges: Edge[]): IterableIterator<Point[]>{
   if(bsp == null) {
-    // ctx.strokeStyle = "#" + Math.random().toString(16).slice(2, 8)
-    // let offset = Math.random() * 20
-    for(const x of edges) drawPolygon(x)
-    // for(const x of edges) drawPolygon(x.map(x => [x[0] + offset, x[1] + offset]))
-    return
+    let points = [...edges[0]]
+    while(points.length < edges.length)
+      points.push(edges.find(x => v.mag(v.sub(points[points.length - 1], x[0])) < 0.0001)![1])
+    return yield points
   }
   let leftEdges: Edge[] = []
   let rightEdges: Edge[] = []
@@ -57,9 +60,9 @@ function drawBsp(bsp: Bsp | undefined, edges: Edge[]){
   })
   leftEdges = trimConvex([...leftEdges, ...both])
   rightEdges = trimConvex([...rightEdges, ...both.map(x => x.slice().reverse()) as Edge[]])
-  drawBsp(bsp.left, leftEdges)
+  yield* bspToConvexPolygons(bsp.left, leftEdges)
   if(bsp.right)
-    drawBsp(bsp.right, rightEdges)
+    yield* bspToConvexPolygons(bsp.right, rightEdges)
 }
 
 function trimConvex(edges: Edge[]){
@@ -78,7 +81,7 @@ function trimConvex(edges: Edge[]){
 
 function* bspEdges(bsp: Bsp): IterableIterator<Edge>{
   if(!bsp) return
-  yield bsp.line
+  yield* bsp.segments
   yield* bspEdges(bsp.left)
   yield* bspEdges(bsp.right)
 }
@@ -92,10 +95,10 @@ function* intersect(aPoly: Point[][], aBsp: Bsp, bPoly: Point[][], bBsp: Bsp){
   yield* clipEdges(aBsp, allPolyEdges(bPoly), true, true)
 }
 
-function* diff(aPoly: Point[][], aBsp: Bsp, bPoly: Point[][], bBsp: Bsp){
+function* diff(aBsp: Bsp, bBsp: Bsp){
   bBsp = invert(bBsp)
-  yield* clipEdges(bBsp, allPolyEdges(aPoly), true, false)
-  yield* clipEdges(aBsp, allPolyEdges(bPoly), true, true)
+  yield* clipEdges(bBsp, [...bspEdges(aBsp)], true, false)
+  yield* clipEdges(aBsp, [...bspEdges(bBsp)], true, true)
 }
 
 function invert(bsp: Bsp):Bsp{
@@ -109,7 +112,7 @@ function invert(bsp: Bsp):Bsp{
 }
 
 function drawPolygon(poly: Point[]){
-  console.log(poly)
+  // console.log(poly)
   ctx.beginPath()
   ctx.moveTo(...poly[poly.length - 1])
   for(const p of poly)
@@ -240,6 +243,7 @@ const v = {
   dot: (a: Point, b: Point) => a[0] * b[0] + a[1] * b[1],
   scl: (a: Point, b: number) => [a[0] * b, a[1] * b] as const,
   rsz: (a: Point, b: number = 1)  => v.scl(a, b / Math.sqrt(v.dot(a, a))),
+  mag: (a:Point) => Math.sqrt(v.dot(a, a)),
 }
 
 function intersectLineSegments([p, pr]: [Point, Point], [q, qs]: [Point, Point]){
