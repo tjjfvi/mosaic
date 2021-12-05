@@ -14,19 +14,49 @@ function tick(){
   canvas.height = window.innerHeight
   ctx.fillStyle = "#000"
   // let b: Point[][] = [[[100, 100], [500, 100], [500, 500], [100, 500]]] // getLetter("B")
-  let b = getLetter("τ≈6.28")
+  let a = getLetter("&")
+  let b = getLetter("@")
+  for(let x of a)
+    drawPolygon(x)
   for(let x of b)
     drawPolygon(x)
-  let bsp = null
-  bsp = polygonToBsp(b)
-  // bsp = addEdgeToBsp(bsp, [b[0][3], b[0][4]])
-  // bsp = addEdgeToBsp(bsp, [b[0][1], b[0][2]])
+  let asp = polygonToBsp(a)
+  let bsp = polygonToBsp(b)
   console.log(bsp)
   for(let i = 0; i < 100000; i++) {
     let point = [Math.random() * 6000, Math.random() * 800] as const
-    if(pointInsideBsp(bsp, point)) continue
-    ctx.fillStyle = "#000"
-    ctx.fillRect(...point, 1, 1)
+    if(pointInsideBsp(asp, point) && !pointInsideBsp(bsp, point)) {
+      ctx.fillStyle = "#000"
+      ctx.fillRect(...point, 1, 1)
+    }
+  }
+  ctx.lineWidth = 3
+  for(let x of diff(a, asp, b, bsp))
+    drawPolygon(x)
+}
+
+function allPolyEdges(poly: Point[][]): [Point, Point][]{
+  return poly.flatMap(x => x.map((y, i) => [y, x[(i + 1) % x.length]]))
+}
+
+function* intersect(aPoly: Point[][], aBsp: Bsp, bPoly: Point[][], bBsp: Bsp){
+  yield* clipEdges(bBsp, allPolyEdges(aPoly), true, false)
+  yield* clipEdges(aBsp, allPolyEdges(bPoly), true, true)
+}
+
+function* diff(aPoly: Point[][], aBsp: Bsp, bPoly: Point[][], bBsp: Bsp){
+  bBsp = invert(bBsp)
+  yield* clipEdges(bBsp, allPolyEdges(aPoly), true, false)
+  yield* clipEdges(aBsp, allPolyEdges(bPoly), true, true)
+}
+
+function invert(bsp: Bsp):Bsp{
+  if(bsp === null) return null
+  return {
+    line: bsp.line.slice().reverse() as never,
+    segments: bsp.segments.map(x => x.slice().reverse()) as never,
+    left: invert(bsp.right),
+    right: invert(bsp.left),
   }
 }
 
@@ -43,7 +73,7 @@ function drawPolygon(poly: Point[]){
 }
 
 function getLetter(letter: string){
-  let path = font.getPath(letter, 0, 700, 500)
+  let path = font.getPath(letter, 0, 700, 900)
   console.log(path.commands)
   let newPath = new opentype.Path()
   let el = document.createElementNS("http://www.w3.org/2000/svg", "path")
@@ -99,19 +129,7 @@ function addEdgeToBsp(bsp: Bsp, edge: [Point, Point]): Bsp{
     else throw new Error("invalid side " + side)
   }
   else {
-    let [x, middle, a, b] = intersectLineSegments(bsp.line, edge)
-    if(b < 0 || b > 1) {
-      console.log(a, b)
-      ctx.beginPath()
-      ctx.moveTo(...bsp.line[0])
-      ctx.lineTo(...bsp.line[1])
-      ctx.moveTo(...edge[0])
-      ctx.lineTo(...edge[1])
-      console.log(pSide, qSide)
-      ctx.stroke()
-      console.log(bsp.line, edge)
-      throw new Error("wat")
-    }
+    let [, middle] = intersectLineSegments(bsp.line, edge)
     let pEdge = [edge[0], middle] as [Point, Point]
     let qEdge = [middle, edge[1]] as [Point, Point]
     for(let [side, edge] of [[pSide, pEdge], [qSide, qEdge]] as const)
@@ -124,12 +142,54 @@ function addEdgeToBsp(bsp: Bsp, edge: [Point, Point]): Bsp{
   return bsp
 }
 
+function* clipEdges(bsp: Bsp, edges: [Point, Point][], inside: boolean, cplnb: boolean): IterableIterator<[Point, Point]>{
+  if(bsp === null) return yield* edges
+  let leftEdges = []
+  let rightEdges = []
+  for(let edge of edges) {
+    let pSide = getSide(bsp.line, edge[0])
+    let qSide = getSide(bsp.line, edge[1])
+    if((pSide || qSide) === (qSide || pSide)) {
+      let side = pSide || qSide
+      if(side === 0)
+        if(v.dot(v.sub(...edge), v.sub(...bsp.line)) > 0)
+          (!inside ? leftEdges : rightEdges).push(edge)
+        else
+          (cplnb === inside ? leftEdges : rightEdges).push(edge)
+      else if(side === -1)
+        leftEdges.push(edge)
+      else if(side === 1)
+        rightEdges.push(edge)
+      else throw new Error("invalid side " + side)
+    }
+    else {
+      let [, middle] = intersectLineSegments(bsp.line, edge)
+      let pEdge = [edge[0], middle] as [Point, Point]
+      let qEdge = [middle, edge[1]] as [Point, Point]
+      for(let [side, edge] of [[pSide, pEdge], [qSide, qEdge]] as const)
+        if(side === -1)
+          leftEdges.push(edge)
+        else if(side === 1)
+          rightEdges.push(edge)
+        else throw new Error("invalid side " + [pSide, qSide, side, edge])
+    }
+  }
+  if(bsp.left)
+    yield* clipEdges(bsp.left, leftEdges, inside, cplnb)
+  else if(inside)
+    yield* leftEdges
+  if(bsp.right)
+    yield* clipEdges(bsp.right, rightEdges, inside, cplnb)
+  else if(!inside)
+    yield* rightEdges
+}
+
 function pointInsideBsp(bsp: Bsp, point: Point): boolean | null{
   if(bsp === null) return null
   let side = getSide(bsp.line, point)
   if(side === 0) return null
   let sub = side === 1 ? bsp.right : bsp.left
-  if(sub === null) return side === 1
+  if(sub === null) return side === -1
   return pointInsideBsp(sub, point)
 }
 
