@@ -12,58 +12,152 @@ const font = opentype.parse(inconsolata)
 function tick(){
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
-  let path = font.getPath("B&CDO", 0, 700, 500)
-  console.log(path)
-  let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
-  let el = document.createElementNS("http://www.w3.org/2000/svg", "path")
-  ctx.beginPath()
-  let p = { x: 0, y: 0 }
-  let m = { x: 0, y: 0 }
-  for(let command of path.commands) {
-    let newPath = new opentype.Path()
-    newPath.extend([{ type: "M", ...p }, command])
-    el.setAttribute("d", newPath.toPathData(10))
-    let old = p
-    p = el.getPointAtLength(el.getTotalLength())
-    p = { x: p.x, y: p.y }
-    // ctx.fillRect(p.x - 1, p.y - 1, 2, 2)
-    if(command.type === "M") {
-      m = command
-      ctx.moveTo(m.x, m.y)
-    }
-    else ctx.lineTo(p.x, p.y)
-    ctx.stroke()
-    ctx.closePath()
-    ctx.beginPath()
-    ctx.moveTo(p.x, p.y)
-    ctx.lineWidth %= 10
-    ctx.lineWidth++
-    if(command.type === "Z") ctx.lineTo(0, 0) // * .5 + p.x * .5, m.y * .5 + p.x * .5)
+  ctx.fillStyle = "#000"
+  // let b: Point[][] = [[[100, 100], [500, 100], [500, 500], [100, 500]]] // getLetter("B")
+  let b = getLetter("X")
+  console.log(b)
+  console.log(b)
+  for(let x of b)
+    drawPolygon(x)
+  let bsp = null
+  bsp = polygonToBsp(b)
+  // bsp = addEdgeToBsp(bsp, [b[0][3], b[0][4]])
+  // bsp = addEdgeToBsp(bsp, [b[0][1], b[0][2]])
+  console.log(bsp)
+  for(let i = 0; i < 10000; i++) {
+    let point = [Math.random() * 600, Math.random() * 800] as const
+    if(pointInsideBsp(bsp, point)) continue
+    ctx.fillStyle = "#000"
+    ctx.fillRect(...point, 1, 1)
   }
-  ctx.strokeStyle = "black"
-  ctx.lineWidth = 1
+}
+
+function drawPolygon(poly: Point[]){
+  console.log(poly)
+  ctx.beginPath()
+  ctx.moveTo(...poly[poly.length - 1])
+  for(const p of poly)
+    ctx.lineTo(...p)
   ctx.stroke()
   ctx.closePath()
+  for(const [i, p] of poly.entries())
+    ctx.fillRect(...p, i + 10, i + 10)
 }
-tick()
 
 function getLetter(letter: string){
-  let path = font.getPath("B&CDO", 0, 700, 500)
+  let path = font.getPath(letter, 0, 700, 800)
+  console.log(path.commands)
+  let newPath = new opentype.Path()
   let el = document.createElementNS("http://www.w3.org/2000/svg", "path")
-  let polygons: [number, number][][] = [[]]
-  let point = { x: 0, y: 0 }
-  for(let command of path.commands) {
-    let newPath = new opentype.Path()
-    newPath.extend([{ type: "M", ...point }, command])
+  let polygons: Point[][] = [[]]
+  let p = [0, 0] as Point
+  for(let [i, command] of path.commands.entries()) {
+    newPath.extend([command])
     el.setAttribute("d", newPath.toPathData(10))
-    let old = point
-    point = el.getPointAtLength(el.getTotalLength())
-    point = { x: point.x, y: point.y }
-
-    polygons[polygons.length - 1].push([point.x, point.y])
-    if(command.type === "Z") polygons.push([])
+    let point = el.getPointAtLength(el.getTotalLength())
+    if(p + "" !== [point.x, point.y] + "")
+      polygons[polygons.length - 1].push(p = [point.x, point.y])
+    if(command.type === "Z") {
+      let p = polygons[polygons.length - 1]
+      if(p[0] + "" === p[p.length - 1] + "")p.pop()
+      if(i !== path.commands.length - 1) {
+        polygons.push([])
+        newPath = new opentype.Path()
+      }
+    }
   }
   return polygons
+}
+
+type Bsp = {
+  line: [Point, Point],
+  segments: [Point, Point][],
+  left: Bsp,
+  right: Bsp,
+} | null
+
+function polygonToBsp(polygon: Point[][]){
+  let bsp = null
+  for(let shape of polygon)
+    for(let [i, p] of shape.entries()) {
+      let q = shape[(i + 1) % shape.length]
+      bsp = addEdgeToBsp(bsp, [p, q])
+    }
+  return bsp
+}
+
+function addEdgeToBsp(bsp: Bsp, edge: [Point, Point]): Bsp{
+  if(bsp === null) return { line: edge, segments: [edge], left: null, right: null }
+  let pSide = getSide(bsp.line, edge[0])
+  let qSide = getSide(bsp.line, edge[1])
+  if((pSide || qSide) === (qSide || pSide)) {
+    let side = pSide || qSide
+    if(side === 0)
+      bsp.segments.push(edge)
+    else if(side === -1)
+      bsp.left = addEdgeToBsp(bsp.left, edge)
+    else if(side === 1)
+      bsp.right = addEdgeToBsp(bsp.right, edge)
+    else throw new Error("invalid side " + side)
+  }
+  else {
+    let [x, middle, a, b] = intersectLineSegments(bsp.line, edge)
+    if(b < 0 || b > 1) {
+      console.log(a, b)
+      ctx.beginPath()
+      ctx.moveTo(...bsp.line[0])
+      ctx.lineTo(...bsp.line[1])
+      ctx.moveTo(...edge[0])
+      ctx.lineTo(...edge[1])
+      console.log(pSide, qSide)
+      ctx.stroke()
+      console.log(bsp.line, edge)
+      throw new Error("wat")
+    }
+    let pEdge = [edge[0], middle] as [Point, Point]
+    let qEdge = [middle, edge[1]] as [Point, Point]
+    for(let [side, edge] of [[pSide, pEdge], [qSide, qEdge]] as const)
+      if(pSide === -1)
+        bsp.left = addEdgeToBsp(bsp.left, edge)
+      else if(pSide === 1)
+        bsp.right = addEdgeToBsp(bsp.right, edge)
+      else throw new Error("invalid side " + [pSide, qSide, side, edge])
+  }
+  return bsp
+}
+
+function pointInsideBsp(bsp: Bsp, point: Point): boolean | null{
+  if(bsp === null) return null
+  let side = getSide(bsp.line, point)
+  if(side === 0) return null
+  let sub = side === 1 ? bsp.right : bsp.left
+  if(sub === null) return side === 1
+  return pointInsideBsp(sub, point)
+}
+
+type Point = readonly [number, number]
+const v = {
+  add: (a: Point, b: Point) => [a[0] + b[0], a[1] + b[1]] as const,
+  sub: (a: Point, b: Point) => [a[0] - b[0], a[1] - b[1]] as const,
+  dot: (a: Point, b: Point) => a[0] * b[0] + a[1] * b[1],
+  scl: (a: Point, b: number) => [a[0] * b, a[1] * b] as const,
+}
+
+function intersectLineSegments([p, pr]: [Point, Point], [q, qs]: [Point, Point]){
+  let cross = (a: Point, b:Point) => a[0] * b[1] - a[1] * b[0]
+  let r = v.sub(pr, p)
+  let s = v.sub(qs, q)
+  let rXs = cross(r, s)
+  let t = cross(v.sub(q, p), s) / rXs
+  let u = cross(v.sub(q, p), r) / rXs
+  return [t >= 0 && t <= 1 && u >= 0 && u <= 1, v.add(r, v.scl(s, u)), t, u]as const
+}
+
+function getSide([p, q]: [Point, Point], r: Point): number{
+  let s = v.sub(q, p)
+  let t = v.sub(r, p)
+  let x = s[0] * t[1] - s[1] * t[0]
+  return Math.abs(x) < 0.0001 ? 0 : Math.sign(x)
 }
 
 /*
@@ -171,3 +265,5 @@ tick()
 
 
 /***/
+
+tick()
