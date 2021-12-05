@@ -13,37 +13,52 @@ function tick(){
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
   ctx.fillStyle = "#000"
-  // let b: Point[][] = [[[100, 100], [500, 100], [500, 500], [100, 500]]] // getLetter("B")
-  let a = getLetter("&")
-  let b = getLetter("@")
-  for(let x of a)
-    drawPolygon(x)
-  for(let x of b)
-    drawPolygon(x)
-  let asp = polygonToBsp(a)
-  let bsp = polygonToBsp(b)
-  let csp = addEdgesToBsp(null, [...diff(asp, bsp)])
-  ctx.lineWidth = 5
-  for(let x of bspEdges(csp))
-    drawPolygon(x)
-  ctx.lineWidth = 1
-  for(const x of bspToConvexPolygons(csp, []))
-    for(let i = 1; i < x.length - 1; i++)
-      drawPolygon([x[0], x[i], x[i + 1]])
-  for(let i = 0; i < 10000; i++) {
-    let point = [Math.random() * 600, Math.random() * 800] as const
-    if(pointInsideBsp(csp, point)) {
-      ctx.fillStyle = "#000"
-      ctx.fillRect(...point, 1, 1)
+  let letterPoly = getLetter("&")
+  let letterBsp = polygonToBsp(letterPoly)
+  {
+    let voronoi = makeVoronoi(p => true || !pointInsideBsp(letterBsp, p), 100)
+    // for(const x of letterPoly) drawPolygon(x)
+    for(const cell of voronoi.cellPolygons()) {
+      let poly = cell.reverse() as never as Point[]
+      let origBsp = polygonToBsp([poly])
+      let diffedEdges = [...diff(origBsp, letterBsp)]
+      // for(let x of [...bspToConvexPolygons(addEdgesToBsp(null, [...diffedEdges]), [])])
+      //   drawPolygon(x)
+      for(let x of reconstructPolygon(diffedEdges))
+        drawPolygon(x)
     }
   }
-  // drawBsp(asp?.right ?? null, trimConvex([asp!.segments.map(x => x)].flat()as Edge[]))
-  // console.log(bsp)
-  // drawBsp(csp, [])
+  {
+    let voronoi = makeVoronoi(p => !!pointInsideBsp(letterBsp, p), 45)
+    for(const x of letterPoly) drawPolygon(x)
+    for(const cell of voronoi.cellPolygons()) {
+      let poly = cell as never as Point[]
+      let origBsp = polygonToBsp([poly])
+      let diffedEdges = [...intersect(origBsp, letterBsp)]
+      // for(let x of [...bspToConvexPolygons(addEdgesToBsp(null, [...diffedEdges]), [])])
+      //   drawPolygon(x)
+      for(let x of reconstructPolygon(diffedEdges))
+        drawPolygon(x)
+    }
+  }
+}
+
+function reconstructPolygon(edges: Edge[]): Point[][]{
+  let polys: Point[][] = []
+  while(edges.length) {
+    polys.push([...edges.pop()!])
+    while(edges.length) {
+      let i = edges.findIndex(x => v.mag(v.sub(polys[polys.length - 1].slice(-1)[0], x[0])) < 0.0001)
+      if(i === -1) break
+      polys[polys.length - 1].push(edges.splice(i, 1)[0][1])
+    }
+  }
+  return polys
 }
 
 function* bspToConvexPolygons(bsp: Bsp, edges: Edge[]): IterableIterator<Point[]>{
   if(bsp == null) {
+    return yield reconstructPolygon(edges)[0]
     let points = [...edges[0]]
     while(points.length < edges.length)
       points.push(edges.find(x => v.mag(v.sub(points[points.length - 1], x[0])) < 0.0001)![1])
@@ -90,9 +105,9 @@ function allPolyEdges(poly: Point[][]): [Point, Point][]{
   return poly.flatMap(x => x.map((y, i) => [y, x[(i + 1) % x.length]]))
 }
 
-function* intersect(aPoly: Point[][], aBsp: Bsp, bPoly: Point[][], bBsp: Bsp){
-  yield* clipEdges(bBsp, allPolyEdges(aPoly), true, false)
-  yield* clipEdges(aBsp, allPolyEdges(bPoly), true, true)
+function* intersect(aBsp: Bsp,  bBsp: Bsp){
+  yield* clipEdges(bBsp, [...bspEdges(aBsp)], true, false)
+  yield* clipEdges(aBsp, [...bspEdges(bBsp)], true, true)
 }
 
 function* diff(aBsp: Bsp, bBsp: Bsp){
@@ -263,14 +278,8 @@ function getSide([p, q]: [Point, Point], r: Point): number{
   return Math.abs(x) < 0.0001 ? 0 : Math.sign(x)
 }
 
-/*
-console.log(rs.hi())
-
 const size = 750
 const cellVariance = 1
-
-// let canvas = document.getElementById("canvas") as HTMLCanvasElement
-// let ctx = canvas.getContext("2d")!
 function makeVoronoi(f: (x: [number, number]) => boolean, cellSize: number){
   const points = [...Array(Math.ceil(size / cellSize))].flatMap((_, i) => [...Array(Math.ceil(size / cellSize))].map((_, j) => genPoint(i, j))).filter(f)
   const delaunay = Delaunay.from(points)
@@ -282,8 +291,14 @@ function makeVoronoi(f: (x: [number, number]) => boolean, cellSize: number){
       (Math.random() - .5) * cellSize * cellVariance + cellY * cellSize,
     ] as [number, number]
   }
-
 }
+
+
+/*
+console.log(rs.hi())
+
+// let canvas = document.getElementById("canvas") as HTMLCanvasElement
+// let ctx = canvas.getContext("2d")!
 
 
 function tick(){
