@@ -14,9 +14,7 @@ function tick(){
   canvas.height = window.innerHeight
   ctx.fillStyle = "#000"
   // let b: Point[][] = [[[100, 100], [500, 100], [500, 500], [100, 500]]] // getLetter("B")
-  let b = getLetter("X")
-  console.log(b)
-  console.log(b)
+  let b = getLetter("τ≈6.28")
   for(let x of b)
     drawPolygon(x)
   let bsp = null
@@ -24,8 +22,8 @@ function tick(){
   // bsp = addEdgeToBsp(bsp, [b[0][3], b[0][4]])
   // bsp = addEdgeToBsp(bsp, [b[0][1], b[0][2]])
   console.log(bsp)
-  for(let i = 0; i < 10000; i++) {
-    let point = [Math.random() * 600, Math.random() * 800] as const
+  for(let i = 0; i < 100000; i++) {
+    let point = [Math.random() * 6000, Math.random() * 800] as const
     if(pointInsideBsp(bsp, point)) continue
     ctx.fillStyle = "#000"
     ctx.fillRect(...point, 1, 1)
@@ -40,12 +38,12 @@ function drawPolygon(poly: Point[]){
     ctx.lineTo(...p)
   ctx.stroke()
   ctx.closePath()
-  for(const [i, p] of poly.entries())
-    ctx.fillRect(...p, i + 10, i + 10)
+  // for(const [i, p] of poly.entries())
+  //   ctx.fillRect(...p, i + 10, i + 10)
 }
 
 function getLetter(letter: string){
-  let path = font.getPath(letter, 0, 700, 800)
+  let path = font.getPath(letter, 0, 700, 500)
   console.log(path.commands)
   let newPath = new opentype.Path()
   let el = document.createElementNS("http://www.w3.org/2000/svg", "path")
@@ -117,9 +115,9 @@ function addEdgeToBsp(bsp: Bsp, edge: [Point, Point]): Bsp{
     let pEdge = [edge[0], middle] as [Point, Point]
     let qEdge = [middle, edge[1]] as [Point, Point]
     for(let [side, edge] of [[pSide, pEdge], [qSide, qEdge]] as const)
-      if(pSide === -1)
+      if(side === -1)
         bsp.left = addEdgeToBsp(bsp.left, edge)
-      else if(pSide === 1)
+      else if(side === 1)
         bsp.right = addEdgeToBsp(bsp.right, edge)
       else throw new Error("invalid side " + [pSide, qSide, side, edge])
   }
@@ -150,7 +148,7 @@ function intersectLineSegments([p, pr]: [Point, Point], [q, qs]: [Point, Point])
   let rXs = cross(r, s)
   let t = cross(v.sub(q, p), s) / rXs
   let u = cross(v.sub(q, p), r) / rXs
-  return [t >= 0 && t <= 1 && u >= 0 && u <= 1, v.add(r, v.scl(s, u)), t, u]as const
+  return [t >= 0 && t <= 1 && u >= 0 && u <= 1, v.add(p, v.scl(r, t)), t, u]as const
 }
 
 function getSide([p, q]: [Point, Point], r: Point): number{
