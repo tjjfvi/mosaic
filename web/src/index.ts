@@ -12,35 +12,71 @@ const font = opentype.parse(inconsolata)
 function tick(){
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
-  ctx.fillStyle = "#000"
-  let letterPoly = getLetter("&")
-  let letterBsp = polygonToBsp(letterPoly)
+  ctx.fillStyle = "#eee"
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  let letterPoly = getLetter("%")
+  // for(let x of letterPoly) {
+  //   ctx.lineWidth = 2
+  //   drawPolygon(x)
+  //   ctx.lineWidth = 1
+  //   drawPolygon(addGrout(x))
+  // }
+  ctx.strokeStyle = "#fff"
   {
-    let voronoi = makeVoronoi(p => true || !pointInsideBsp(letterBsp, p), 100)
-    // for(const x of letterPoly) drawPolygon(x)
+    let letterBsp = polygonToBsp(letterPoly.map(x => addGrout(x.slice().reverse(), .1)!.reverse()))
+    ctx.fillStyle = "#03f"
+    let voronoi = makeVoronoi(p => !pointInsideBsp(letterBsp, p), 70)
     for(const cell of voronoi.cellPolygons()) {
-      let poly = cell.reverse() as never as Point[]
+      let poly = (cell.slice(1).reverse() as never as Point[])
       let origBsp = polygonToBsp([poly])
       let diffedEdges = [...diff(origBsp, letterBsp)]
-      // for(let x of [...bspToConvexPolygons(addEdgesToBsp(null, [...diffedEdges]), [])])
-      //   drawPolygon(x)
-      for(let x of reconstructPolygon(diffedEdges))
-        drawPolygon(x)
+      for(let x of reconstructPolygon(diffedEdges)) {
+        console.log(x)
+        let g = addGrout(x)
+        if(g)
+          drawPolygon(g)
+      }
     }
   }
   {
+    ctx.fillStyle = "#0f3"
+    let letterBsp = polygonToBsp(letterPoly.map(x => addGrout(x.slice(), .1)!))
     let voronoi = makeVoronoi(p => !!pointInsideBsp(letterBsp, p), 45)
-    for(const x of letterPoly) drawPolygon(x)
     for(const cell of voronoi.cellPolygons()) {
-      let poly = cell as never as Point[]
+      let poly = (cell.slice(1).reverse() as never as Point[])
       let origBsp = polygonToBsp([poly])
       let diffedEdges = [...intersect(origBsp, letterBsp)]
-      // for(let x of [...bspToConvexPolygons(addEdgesToBsp(null, [...diffedEdges]), [])])
-      //   drawPolygon(x)
-      for(let x of reconstructPolygon(diffedEdges))
-        drawPolygon(x)
+      for(let x of reconstructPolygon(diffedEdges)) {
+        console.log(x)
+        let g = addGrout(x, 1)
+        if(g)
+          drawPolygon(g)
+      }
     }
   }
+}
+
+function addGrout(polygon: Point[], x:number = 1){
+  // return polygon
+  polygon = polygon.filter((x, i, a) => v.mag(v.sub(x, a[(i + 1) % a.length])) > 8)
+  if(polygon.length < 3) return null
+  let newPolygon: Point[] = []
+  for(const [i, b] of polygon.entries()) {
+    let a = polygon[(i + polygon.length - 1) % polygon.length]
+    let c = polygon[(i + 1) % polygon.length]
+    let concave = getSide([a, b], c) !== -1
+    let minV = concave ? v.sub(b, a) : v.sub(c, b)
+    let maxV = concave ? v.sub(b, c) : v.sub(a, b)
+    let [minA, maxA] = [minV, maxV].map(x => Math.atan2(...v.rsz(x)))
+    if(Math.abs(Math.abs(maxA - minA) - Math.PI) < Math.PI * 2 / 360) continue
+    let diffA = (maxA < minA ? (Math.PI * 2 + maxA - minA) : maxA - minA)
+    let angle = minA + (Math.random() * 1 / 3 + 1 / 3) * diffA
+    let amount = x * (2.5 + 1.5 * Math.random())
+    newPolygon.push([b[0] + Math.sin(angle) * amount, b[1] + Math.cos(angle) * amount])
+  }
+  newPolygon = newPolygon.filter((x, i, a) => v.mag(v.sub(x, a[(i + 1) % a.length])) > 4)
+  if(newPolygon.length < 3) return null
+  return newPolygon
 }
 
 function reconstructPolygon(edges: Edge[]): Point[][]{
@@ -53,17 +89,12 @@ function reconstructPolygon(edges: Edge[]): Point[][]{
       polys[polys.length - 1].push(edges.splice(i, 1)[0][1])
     }
   }
-  return polys
+  return polys.map(x => x.slice(0, -1))
 }
 
 function* bspToConvexPolygons(bsp: Bsp, edges: Edge[]): IterableIterator<Point[]>{
-  if(bsp == null) {
+  if(bsp == null)
     return yield reconstructPolygon(edges)[0]
-    let points = [...edges[0]]
-    while(points.length < edges.length)
-      points.push(edges.find(x => v.mag(v.sub(points[points.length - 1], x[0])) < 0.0001)![1])
-    return yield points
-  }
   let leftEdges: Edge[] = []
   let rightEdges: Edge[] = []
   let both: Edge[] = [[v.sub(bsp.line[0], v.rsz(v.sub(...bsp.line), 10000)), v.add(bsp.line[0], v.rsz(v.sub(...bsp.line), 10000))]]
@@ -132,14 +163,15 @@ function drawPolygon(poly: Point[]){
   ctx.moveTo(...poly[poly.length - 1])
   for(const p of poly)
     ctx.lineTo(...p)
-  ctx.stroke()
+  // ctx.stroke()
+  ctx.fill()
   ctx.closePath()
   // for(const [i, p] of poly.entries())
   //   ctx.fillRect(...p, i + 10, i + 10)
 }
 
 function getLetter(letter: string){
-  let path = font.getPath(letter, 0, 700, 900)
+  let path = font.getPath(letter, 100, 700, 900)
   console.log(path.commands)
   let newPath = new opentype.Path()
   let el = document.createElementNS("http://www.w3.org/2000/svg", "path")
