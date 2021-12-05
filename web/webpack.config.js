@@ -12,6 +12,11 @@ module.exports = {
   module: {
     rules: [
       {
+        test: /\.(woff|ttf)$/,
+        use: 'arraybuffer-loader',
+        exclude: /node_modules/,
+      },
+      {
         test: /\.ts$/,
         use: 'ts-loader',
         exclude: /node_modules/,

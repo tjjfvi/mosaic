@@ -1,14 +1,79 @@
-
 import * as rs from "../pkg/index.js"
 import { Delaunay } from "d3-delaunay"
+import * as opentype from "opentype.js"
+// @ts-ignore
+import inconsolata from "../RobotoMono-Regular.ttf"
 
+let canvas = document.getElementById("canvas") as HTMLCanvasElement
+let ctx = canvas.getContext("2d")!
+
+const font = opentype.parse(inconsolata)
+
+function tick(){
+  canvas.width = window.innerWidth
+  canvas.height = window.innerHeight
+  let path = font.getPath("B&CDO", 0, 700, 500)
+  console.log(path)
+  let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+  let el = document.createElementNS("http://www.w3.org/2000/svg", "path")
+  ctx.beginPath()
+  let p = { x: 0, y: 0 }
+  let m = { x: 0, y: 0 }
+  for(let command of path.commands) {
+    let newPath = new opentype.Path()
+    newPath.extend([{ type: "M", ...p }, command])
+    el.setAttribute("d", newPath.toPathData(10))
+    let old = p
+    p = el.getPointAtLength(el.getTotalLength())
+    p = { x: p.x, y: p.y }
+    // ctx.fillRect(p.x - 1, p.y - 1, 2, 2)
+    if(command.type === "M") {
+      m = command
+      ctx.moveTo(m.x, m.y)
+    }
+    else ctx.lineTo(p.x, p.y)
+    ctx.stroke()
+    ctx.closePath()
+    ctx.beginPath()
+    ctx.moveTo(p.x, p.y)
+    ctx.lineWidth %= 10
+    ctx.lineWidth++
+    if(command.type === "Z") ctx.lineTo(0, 0) // * .5 + p.x * .5, m.y * .5 + p.x * .5)
+  }
+  ctx.strokeStyle = "black"
+  ctx.lineWidth = 1
+  ctx.stroke()
+  ctx.closePath()
+}
+tick()
+
+function getLetter(letter: string){
+  let path = font.getPath("B&CDO", 0, 700, 500)
+  let el = document.createElementNS("http://www.w3.org/2000/svg", "path")
+  let polygons: [number, number][][] = [[]]
+  let point = { x: 0, y: 0 }
+  for(let command of path.commands) {
+    let newPath = new opentype.Path()
+    newPath.extend([{ type: "M", ...point }, command])
+    el.setAttribute("d", newPath.toPathData(10))
+    let old = point
+    point = el.getPointAtLength(el.getTotalLength())
+    point = { x: point.x, y: point.y }
+
+    polygons[polygons.length - 1].push([point.x, point.y])
+    if(command.type === "Z") polygons.push([])
+  }
+  return polygons
+}
+
+/*
 console.log(rs.hi())
 
 const size = 750
 const cellVariance = 1
 
-let canvas = document.getElementById("canvas") as HTMLCanvasElement
-let ctx = canvas.getContext("2d")!
+// let canvas = document.getElementById("canvas") as HTMLCanvasElement
+// let ctx = canvas.getContext("2d")!
 function makeVoronoi(f: (x: [number, number]) => boolean, cellSize: number){
   const points = [...Array(Math.ceil(size / cellSize))].flatMap((_, i) => [...Array(Math.ceil(size / cellSize))].map((_, j) => genPoint(i, j))).filter(f)
   const delaunay = Delaunay.from(points)
@@ -104,4 +169,5 @@ function measure(str: string){
 tick()
 
 
-export {}
+
+/***/
