@@ -11,65 +11,48 @@ let canvas = document.getElementById("canvas") as HTMLCanvasElement
 let ctx = canvas.getContext("2d")!
 
 const size = 750
+const bgCellSize = 70
+const fgCellSize = 45
+const symbolGrout = .1
 
 function tick(){
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
   ctx.fillStyle = "#eee"
-  ctx.fillRect(0, 0, size, size)
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
   let letterPoly = getLetterPolygon("@", size)
-  // for(let x of letterPoly) {
-  //   ctx.lineWidth = 2
-  //   drawPolygon(x)
-  //   ctx.lineWidth = 1
-  //   drawPolygon(addGrout(x))
-  // }
-  ctx.strokeStyle = "#fff"
-  {
-    let letterBsp = polygonToBsp(letterPoly.map(x => addGrout(x.slice().reverse(), .1)!.reverse()))
-    ctx.fillStyle = "#03f"
-    let voronoi = makeVoronoi(p => !pointInsideBsp(letterBsp, p), size, 70)
-    for(const cell of voronoi.cellPolygons()) {
-      let poly = (cell.slice(1).reverse() as never as Point[])
+  for(const [fillColor, isFg, cellSize] of [["#03f", false, bgCellSize], ["#0f3", true, fgCellSize]] as const) {
+    ctx.fillStyle = fillColor
+    let letterBsp = polygonToBsp(letterPoly.map(x => addGrout(x, symbolGrout, !isFg)!))
+    let voronoi = makeVoronoi(p => isFg === pointInsideBsp(letterBsp, p), size, cellSize)
+    for(const poly of voronoi) {
       let origBsp = polygonToBsp([poly])
-      let diffedEdges = [...diff(origBsp, letterBsp)]
+      let diffedEdges = [...(isFg ? intersect : diff)(origBsp, letterBsp)]
       for(let x of reconstructPolygon(diffedEdges)) {
-        // console.log(x)
         let g = addGrout(x)
         if(g)
-          drawPolygon(g)
-      }
-    }
-  }
-  {
-    ctx.fillStyle = "#0f3"
-    let letterBsp = polygonToBsp(letterPoly.map(x => addGrout(x.slice(), .1)!))
-    let voronoi = makeVoronoi(p => !!pointInsideBsp(letterBsp, p), size, 45)
-    for(const cell of voronoi.cellPolygons()) {
-      let poly = (cell.slice(1).reverse() as never as Point[])
-      let origBsp = polygonToBsp([poly])
-      let diffedEdges = [...intersect(origBsp, letterBsp)]
-      for(let x of reconstructPolygon(diffedEdges)) {
-        // console.log(x)
-        let g = addGrout(x, 1)
-        if(g)
-          drawPolygon(g)
+          fillPolygon(g)
       }
     }
   }
 }
 
-function drawPolygon(poly: Point[]){
-  // console.log(poly)
+function strokePolygon(poly: Point[]){
   ctx.beginPath()
   ctx.moveTo(...poly[poly.length - 1])
   for(const p of poly)
     ctx.lineTo(...p)
-  // ctx.stroke()
+  ctx.stroke()
+  ctx.closePath()
+}
+
+function fillPolygon(poly: Point[]){
+  ctx.beginPath()
+  ctx.moveTo(...poly[poly.length - 1])
+  for(const p of poly)
+    ctx.lineTo(...p)
   ctx.fill()
   ctx.closePath()
-  // for(const [i, p] of poly.entries())
-  //   ctx.fillRect(...p, i + 10, i + 10)
 }
 
 tick()

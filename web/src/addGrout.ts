@@ -5,8 +5,9 @@ const angleRange = 1 / 3
 const radiusMin = 2.5
 const radiusMax = radiusMin + 1.5
 
-export function addGrout(polygon: Point[], scale: number = 1){
+export function addGrout(polygon: Point[], scale: number = 1, reverse = false){
   polygon = polygon.filter((x, i, a) => v.mag(v.sub(x, a[(i + 1) % a.length])) > 8)
+  if(reverse) polygon.reverse()
   if(polygon.length < 3) return null
   let newPolygon: Point[] = []
   for(const [i, b] of polygon.entries()) {
@@ -24,5 +25,6 @@ export function addGrout(polygon: Point[], scale: number = 1){
   }
   newPolygon = newPolygon.filter((x, i, a) => v.mag(v.sub(x, a[(i + 1) % a.length])) > 4)
   if(newPolygon.length < 3) return null
+  if(reverse) newPolygon.reverse()
   return newPolygon
 }
