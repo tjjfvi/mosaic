@@ -1,5 +1,5 @@
 import * as rs from "../pkg/index.js"
-import { allPolyEdges, Point, reconstructPolygon } from "./geo"
+import { allPolyEdges, Point, reconstructPolygon, v } from "./geo"
 import { getSymbolPolygon } from "./getSymbolPolygon"
 import { addEdgesToBsp, Bsp, bspEdges, bspToConvexPolygons, diff, intersect, pointInsideBsp, polygonToBsp } from "./bsp"
 import { makeVoronoi } from "./voronoi"
@@ -13,7 +13,7 @@ let canvas = document.getElementById("canvas") as HTMLCanvasElement
 
 const scene = new t.Scene()
 const camera = new t.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-const renderer = new t.WebGLRenderer({ canvas })
+const renderer = new t.WebGLRenderer({ canvas, antialias: true })
 renderer.setSize(window.innerWidth, window.innerHeight)
 
 const size = 750
@@ -22,7 +22,9 @@ const fgCellSize = size / 17
 const symbolGrout = .1
 
 let light = new t.PointLight()
-light.position.y += 10
+light.position.x += 5
+light.position.y += 15
+light.position.z += 0
 scene.add(light)
 scene.add(new t.AmbientLight(0x404040))
 
@@ -42,7 +44,15 @@ function tick(){
         if(g) {
           const geometry = bspGeo(polygonToBsp([g]), 10 / 750)
           geometry.computeVertexNormals()
-          const material = new t.MeshStandardMaterial({ color: fillColor, roughness: .5, metalness: .15 })
+          let color = new t.Color(fillColor)
+          let hsl = { h: 0, s: 0, l: 0 }
+          color.getHSL(hsl)
+          console.log(hsl)
+          hsl.h += (Math.random() - .5) * .075
+          hsl.s += (Math.random() - .5) * .1
+          hsl.l += (Math.random() - .5) * .2
+          color.setHSL(hsl.h, hsl.s, hsl.l)
+          const material = new t.MeshStandardMaterial({ color, roughness: .35 + Math.random() * .05, metalness: .1 + Math.random() * .1 })
           const cube = new t.Mesh(geometry, material)
           scene.add(cube)
         }
@@ -57,11 +67,13 @@ function tick(){
   controls.target.set(5, 0, 5)
   camera.position.z = 5
 
-  setInterval(() => {
+  f()
+  function f(){
+    window.requestAnimationFrame(f)
     // @ts-ignore
     controls.update()
     renderer.render(scene, camera)
-  }, 1)
+  }
 }
 
 function bspGeo(bsp: Bsp, s: number): t.BufferGeometry{
@@ -70,6 +82,18 @@ function bspGeo(bsp: Bsp, s: number): t.BufferGeometry{
   let edges = [...bspEdges(bsp)]
   let polys = [...bspToConvexPolygons(bsp, [])]
 
+  const thickness = .1
+
+  let min = edges.flat().reduce((a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1])])
+  let max = edges.flat().reduce((a, b) => [Math.max(a[0], b[0]), Math.max(a[1], b[1])])
+  let center = [min[0] / 2 + max[0] / 2, min[1] / 2 + max[1] / 2] as const
+  let slantDir = Math.random() * Math.PI * 2
+  let slantAmount = Math.random() * thickness * 1
+  let slantDirV = v.scl([Math.cos(slantDir), Math.sin(slantDir)], slantAmount / v.mag(v.sub(max, min)))
+
+  let th = (x: number, y: number) =>
+    thickness - v.dot(slantDirV, v.sub([x, y], center))
+
   console.log(polys)
 
   const vertices = new Float32Array(
@@ -77,7 +101,6 @@ function bspGeo(bsp: Bsp, s: number): t.BufferGeometry{
     + edges.length * 2 * 3 * 3,
   )
 
-  const thickness = .1
 
   let vi = 0
 
@@ -87,13 +110,13 @@ function bspGeo(bsp: Bsp, s: number): t.BufferGeometry{
         [poly[0], 0],
         [poly[i + 1], 0],
         [poly[i + 2], 0],
-        [poly[i + 1], thickness],
-        [poly[0], thickness],
-        [poly[i + 2], thickness],
+        [poly[i + 1], 1],
+        [poly[0], 1],
+        [poly[i + 2], 1],
       ] as const) {
         console.log("v")
         vertices[vi++] = x * s
-        vertices[vi++] = z
+        vertices[vi++] = z * th(x, y)
         vertices[vi++] = y * s
       }
 
@@ -108,7 +131,7 @@ function bspGeo(bsp: Bsp, s: number): t.BufferGeometry{
     ] as const) {
       console.log("v")
       vertices[vi++] = x * s
-      vertices[vi++] = z * thickness
+      vertices[vi++] = z * th(x, y)
       vertices[vi++] = y * s
     }
 
