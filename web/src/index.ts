@@ -11,8 +11,8 @@ let canvas = document.getElementById("canvas") as HTMLCanvasElement
 let ctx = canvas.getContext("2d")!
 
 const size = 750
-const bgCellSize = 70
-const fgCellSize = 45
+const bgCellSize = size / 11
+const fgCellSize = size / 17
 const symbolGrout = .1
 
 function tick(){
@@ -24,7 +24,7 @@ function tick(){
   for(const [fillColor, isFg, cellSize] of [["#03f", false, bgCellSize], ["#0f3", true, fgCellSize]] as const) {
     ctx.fillStyle = fillColor
     let letterBsp = polygonToBsp(symbolPoly.map(x => addGrout(x, symbolGrout, !isFg)!))
-    let voronoi = makeVoronoi(p => isFg === pointInsideBsp(letterBsp, p), size, cellSize)
+    let voronoi = makeVoronoi(p => isFg === !!pointInsideBsp(letterBsp, p), size, cellSize)
     for(const poly of voronoi) {
       let origBsp = polygonToBsp([poly])
       let diffedEdges = [...(isFg ? intersect : diff)(origBsp, letterBsp)]
