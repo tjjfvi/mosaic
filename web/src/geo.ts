@@ -26,7 +26,7 @@ export function getSide([p, q]: [Point, Point], r: Point): number{
   let s = v.sub(q, p)
   let t = v.sub(r, p)
   let x = s[0] * t[1] - s[1] * t[0]
-  return Math.abs(x) < 0.0001 ? 0 : Math.sign(x)
+  return Math.sign(x)
 }
 
 export function allPolyEdges(poly: Point[][]): [Point, Point][]{
