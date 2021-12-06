@@ -16,8 +16,8 @@ function tick(){
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
   ctx.fillStyle = "#eee"
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
-  let letterPoly = getLetterPolygon("%")
+  ctx.fillRect(0, 0, size, size)
+  let letterPoly = getLetterPolygon("@", size)
   // for(let x of letterPoly) {
   //   ctx.lineWidth = 2
   //   drawPolygon(x)
@@ -42,7 +42,7 @@ function tick(){
     }
   }
   {
-    // ctx.fillStyle = "#0f3"
+    ctx.fillStyle = "#0f3"
     let letterBsp = polygonToBsp(letterPoly.map(x => addGrout(x.slice(), .1)!))
     let voronoi = makeVoronoi(p => !!pointInsideBsp(letterBsp, p), size, 45)
     for(const cell of voronoi.cellPolygons()) {

@@ -6,9 +6,18 @@ import fontData from "../RobotoMono-Regular.ttf"
 
 const font = opentype.parse(fontData)
 
-export function getLetterPolygon(letter: string){
-  let path = font.getPath(letter, 100, 700, 900)
-  console.log(path.commands)
+const fontSizeScale = 700 / 750
+
+export function getLetterPolygon(letter: string, size: number){
+  let fontSize = fontSizeScale * size
+  let bb = font.getPath(letter, 0, 0, fontSize).getBoundingBox()
+  let path = font.getPath(
+    letter,
+    size / 2 - (bb.x2 + bb.x1) / 2,
+    size / 2 + (font.tables.os2.sCapHeight) * fontSize / font.unitsPerEm / 2 - Math.max(bb.y2 / 2, 0),
+    fontSize,
+  )
+  if(!path.commands.length) return []
   let newPath = new opentype.Path()
   let el = document.createElementNS("http://www.w3.org/2000/svg", "path")
   let polygons: Point[][] = [[]]
