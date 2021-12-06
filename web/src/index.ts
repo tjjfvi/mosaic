@@ -1,6 +1,6 @@
 import * as rs from "../pkg/index.js"
 import { Point, reconstructPolygon } from "./geo"
-import { getLetterPolygon } from "./getLetterPolygon"
+import { getSymbolPolygon } from "./getSymbolPolygon"
 import { diff, intersect, pointInsideBsp, polygonToBsp } from "./bsp"
 import { makeVoronoi } from "./voronoi"
 import { addGrout } from "./addGrout"
@@ -20,10 +20,10 @@ function tick(){
   canvas.height = window.innerHeight
   ctx.fillStyle = "#eee"
   ctx.fillRect(0, 0, canvas.width, canvas.height)
-  let letterPoly = getLetterPolygon("@", size)
+  let symbolPoly = getSymbolPolygon("@", size)
   for(const [fillColor, isFg, cellSize] of [["#03f", false, bgCellSize], ["#0f3", true, fgCellSize]] as const) {
     ctx.fillStyle = fillColor
-    let letterBsp = polygonToBsp(letterPoly.map(x => addGrout(x, symbolGrout, !isFg)!))
+    let letterBsp = polygonToBsp(symbolPoly.map(x => addGrout(x, symbolGrout, !isFg)!))
     let voronoi = makeVoronoi(p => isFg === pointInsideBsp(letterBsp, p), size, cellSize)
     for(const poly of voronoi) {
       let origBsp = polygonToBsp([poly])
