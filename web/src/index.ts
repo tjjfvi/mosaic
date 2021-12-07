@@ -47,12 +47,11 @@ function tick(){
           let color = new t.Color(fillColor)
           let hsl = { h: 0, s: 0, l: 0 }
           color.getHSL(hsl)
-          console.log(hsl)
           hsl.h += (Math.random() - .5) * .075
           hsl.s += (Math.random() - .5) * .1
           hsl.l += (Math.random() - .5) * .2
           color.setHSL(hsl.h, hsl.s, hsl.l)
-          const material = new t.MeshStandardMaterial({ color, roughness: .35 + Math.random() * .05, metalness: .1 + Math.random() * .1 })
+          const material = new t.MeshStandardMaterial({ color, roughness: .35 + Math.random() * .05, metalness: .05 + Math.random() * .05 })
           const cube = new t.Mesh(geometry, material)
           scene.add(cube)
         }
@@ -63,14 +62,20 @@ function tick(){
   camera.position.set(5, 5, 5)
 
   const controls = new OrbitControls(camera, renderer.domElement)
-  // @ts-ignore
   controls.target.set(5, 0, 5)
+  controls.enableDamping = true
+  controls.dampingFactor = 0.05
+  controls.screenSpacePanning = false
+  controls.minDistance = 1
+  controls.maxDistance = 500
+
+  controls.maxPolarAngle = Math.PI * .45
   camera.position.z = 5
 
   f()
   function f(){
     window.requestAnimationFrame(f)
-    // @ts-ignore
+    controls.target.y = 0
     controls.update()
     renderer.render(scene, camera)
   }
@@ -94,13 +99,10 @@ function bspGeo(bsp: Bsp, s: number): t.BufferGeometry{
   let th = (x: number, y: number) =>
     thickness - v.dot(slantDirV, v.sub([x, y], center))
 
-  console.log(polys)
-
   const vertices = new Float32Array(
     polys.map(x => (x.length - 2) * 3 * 3).reduce((a, b) => a + b, 0) * 2
     + edges.length * 2 * 3 * 3,
   )
-
 
   let vi = 0
 
@@ -114,7 +116,6 @@ function bspGeo(bsp: Bsp, s: number): t.BufferGeometry{
         [poly[0], 1],
         [poly[i + 2], 1],
       ] as const) {
-        console.log("v")
         vertices[vi++] = x * s
         vertices[vi++] = z * th(x, y)
         vertices[vi++] = y * s
@@ -129,13 +130,10 @@ function bspGeo(bsp: Bsp, s: number): t.BufferGeometry{
       [edge[0], 0],
       [edge[1], 0],
     ] as const) {
-      console.log("v")
       vertices[vi++] = x * s
       vertices[vi++] = z * th(x, y)
       vertices[vi++] = y * s
     }
-
-  console.log(vertices)
 
   geometry.setAttribute("position", new t.BufferAttribute(vertices, 3))
   return geometry
