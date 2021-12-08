@@ -7,46 +7,49 @@ import { addGrout } from "./addGrout"
 import * as t from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls"
+import { Object3D } from "three"
 
 console.log(rs.hi())
 
 let canvas = document.getElementById("canvas") as HTMLCanvasElement
 
 const scene = new t.Scene()
-const camera = new t.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
+const camera = new t.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200)
 const renderer = new t.WebGLRenderer({ canvas, antialias: true })
 renderer.setSize(window.innerWidth, window.innerHeight)
+renderer.physicallyCorrectLights = true
 
 const size = 750
 const bgCellSize = size / 11
 const fgCellSize = size / 17
 const symbolGrout = .1
 
-let light = new t.PointLight()
-light.position.x += 5
-light.position.y += 15
-light.position.z += 0
+let light = new t.DirectionalLight()
+light.position.set(-2, 5, -10)
+light.intensity = 1
+// light.decay = 1
+// light.color = new t.Color(0x101010)
 scene.add(light)
-scene.add(new t.AmbientLight(0x404040))
+scene.add(new t.AmbientLight(0xffffff, 2))
+// scene.add(new t.PointLightHelper(light))
 
 function tick(){
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
 
-  const lowRes = new t.Group()
-  const highRes = new t.Group()
-  scene.add(lowRes, highRes)
+  scene.updateMatrixWorld = function(force: boolean){
+    if(force)
+      Object3D.prototype.updateMatrixWorld.call(this, force)
+  }
 
-  for(let i = 0; i < 5; i++)
-    for(let j = 0; j < 5; j++) {
-      let tile = createTile("#03f", "#0f3", "@")
-      lowRes.add(lowResTile(tile, i, j))
-      highRes.add(highResTile(tile, i, j))
+  const chunkSize = 100
+  let tiles = [...Array(20)].map(x => createTile("#03f", "#0f3", "&"))
+  for(let i = 0; i < chunkSize; i++)
+    for(let j = 0; j < chunkSize; j++) {
+      let tile = tileObject(tiles[(Math.random() * 20) | 0], i, j)
+      scene.add(tile)
+      tile.updateMatrixWorld()
     }
-  //     createTile("#03f", "#0f3", "@", i, j)
-  // for(let i = 0; i < 20; i++)
-  //   for(let j = 0; j < 20; j++)
-  //     createTile("#03f", "#0f3", "@", i, j)
 
   camera.position.set(0, 50, 0)
 
@@ -75,8 +78,6 @@ function tick(){
     const dist = orbitControls.getDistance()
     orbitControls.minPolarAngle = orbitControls.maxPolarAngle = Math.PI / 2 *  (1 - dist / 150) ** 2
     orbitControls.update()
-    highRes.visible = dist < 30
-    lowRes.visible = dist > 30
     renderer.render(scene, camera)
   }
 }
@@ -139,7 +140,18 @@ function createTile(bgColor: string, fgColor: string, symbol: string): Stone[]{
   return stones
 }
 
-function lowResTile(stones: Stone[], x: number, y: number){
+function tileObject(stones: Stone[], x: number, y: number){
+  const lod = new t.LOD()
+  // @ts-ignore
+  lod.addLevel((stones.a ??= highResTile(stones)).clone(), 40)
+  // @ts-ignore
+  lod.addLevel((stones.b ??= lowResTile(stones)).clone(), 50)
+  // lod.addLevel(new t.Group(), 200)
+  lod.position.set(x * tileSize, 0, y * tileSize)
+  return lod
+}
+
+function lowResTile(stones: Stone[]){
   const textureSize = 500
 
   const createTexture = () => {
@@ -191,7 +203,7 @@ function lowResTile(stones: Stone[], x: number, y: number){
 
   const tile = new t.Mesh(geo, mat)
   tile.rotation.x = -Math.PI / 2
-  tile.position.set(x * tileSize, thickness, y * tileSize)
+  tile.position.y = thickness
 
   return tile
 
@@ -200,7 +212,7 @@ function lowResTile(stones: Stone[], x: number, y: number){
   }
 }
 
-function highResTile(stones: Stone[], x: number, y: number){
+function highResTile(stones: Stone[]){
   const tile = new t.Group()
   for(let stone of stones) {
 
@@ -253,11 +265,9 @@ function highResTile(stones: Stone[], x: number, y: number){
 
     const topMesh = new t.Mesh(topGeo, topMat)
     const sideMesh = new t.Mesh(sideGeo, sideMat)
-    const group = new t.Group()
-    group.add(topMesh, sideMesh)
-    group.position.set((x - .5) * tileSize, 0, (y - .5) * tileSize)
-    tile.add(group)
+    tile.add(topMesh, sideMesh)
   }
+  tile.position.set(-.5 * tileSize, 0, -.5 * tileSize)
   return tile
 }
 
