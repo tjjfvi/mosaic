@@ -1,5 +1,5 @@
 [package]
-name = "web"
+name = "mosaic-web"
 version = "0.1.0"
 authors = ["tjjfvi <tjjfvi@tjjfvi.com>"]
 edition = "2018"
@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-mosaic = { path = "../rust" }
+mosaic = { path = ".." }
 wasm-bindgen = "0.2.63"
 console_error_panic_hook = { version = "0.1.6", optional = true }
 js-sys = "0.3.52"

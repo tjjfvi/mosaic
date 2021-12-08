@@ -72,6 +72,17 @@ name = "mosaic"
 version = "0.1.0"
 
 [[package]]
+name = "mosaic-web"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "getrandom",
+ "js-sys",
+ "mosaic",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -165,14 +176,3 @@ name = "wasm-bindgen-shared"
 version = "0.2.78"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0237232789cf037d5480773fe568aac745bfe2afbc11a863e97901780a6b47cc"
-
-[[package]]
-name = "web"
-version = "0.1.0"
-dependencies = [
- "console_error_panic_hook",
- "getrandom",
- "js-sys",
- "mosaic",
- "wasm-bindgen",
-]
