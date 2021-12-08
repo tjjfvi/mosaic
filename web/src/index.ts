@@ -6,7 +6,7 @@ import { makeVoronoi } from "./voronoi"
 import { addGrout } from "./addGrout"
 import * as t from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
-import { MeshNormalMaterial } from "three"
+import { TrackballControls } from "three/examples/jsm/controls/TrackballControls"
 
 console.log(rs.hi())
 
@@ -33,34 +33,48 @@ function tick(){
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
 
-  // for(let i = 0; i < 5; i++)
-  //   for(let j = 0; j < 5; j++)
+  // for(let i = 0; i < 20; i++)
+  //   for(let j = 0; j < 20; j++)
   //     createTile("#03f", "#0f3", "@", i, j)
-  for(let i = -20; i < 20; i++)
-    for(let j = -20; j < 20; j++)
+  for(let i = 0; i < 20; i++)
+    for(let j = 0; j < 20; j++)
       createTile("#03f", "#0f3", "@", i, j)
   // createTile("#03f", "#0f3", "@", 0, 0)
 
-  camera.position.set(0, 5, 0)
+  camera.position.set(0, 50, 0)
 
-  const controls = new OrbitControls(camera, renderer.domElement)
-  controls.target.set(0, 0, 0)
-  controls.enableDamping = true
-  controls.dampingFactor = 0.05
-  controls.screenSpacePanning = false
-  controls.minDistance = 1
-  controls.maxDistance = 500
+  const orbitControls = new OrbitControls(camera, renderer.domElement)
+  orbitControls.target.set(0, 0, 0)
+  orbitControls.enableDamping = true
+  orbitControls.dampingFactor = 0.05
+  orbitControls.screenSpacePanning = false
+  orbitControls.enableRotate = false
+  orbitControls.mouseButtons.LEFT = t.MOUSE.PAN
+  orbitControls.enableZoom = false
+  const trackballControls = new TrackballControls(camera, renderer.domElement)
+  trackballControls.noRoll = true
+  trackballControls.noPan = true
+  trackballControls.noRotate = true
+  trackballControls.minDistance = 5
+  trackballControls.maxDistance = 150
+  trackballControls.target = orbitControls.target
 
-  controls.maxPolarAngle = Math.PI * .45
+  orbitControls.maxPolarAngle = Math.PI * .45
 
   f()
   function f(){
     window.requestAnimationFrame(f)
-    controls.target.y = 0
-    controls.update()
+    trackballControls.update()
+    orbitControls.minPolarAngle = orbitControls.maxPolarAngle = Math.PI / 2 *  (1 - orbitControls.getDistance() / 150) ** 2
+    orbitControls.update()
     renderer.render(scene, camera)
   }
 }
+function createTile(bgColor: string, fgColor: string, symbol: string, x:number, y: number){
+  let symbolPoly = getSymbolPolygon(symbol, size)
+
+  const tileSize = 10
+
   interface Stone {
     poly: Point[],
     color: t.Color,
@@ -69,10 +83,6 @@ function tick(){
     slantDir: number,
     slantSlope: number,
   }
-function createTile(bgColor: string, fgColor: string, symbol: string, x:number, y: number){
-  let symbolPoly = getSymbolPolygon(symbol, size)
-
-  const tileSize = 10
 
   const stones: Stone[] = []
 
