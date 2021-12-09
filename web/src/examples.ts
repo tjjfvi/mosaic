@@ -5,9 +5,9 @@ import cgol from "../../examples/cgol.mosaic"
 import fact from "../../examples/fact.mosaic"
 import fib from "../../examples/fib.mosaic"
 
-export const examples = {
-  bf: bf as string,
-  cgol: cgol as string,
-  fact: fact as string,
-  fib: fib as string,
+export const examples: Record<string, [name: string, title: string, input?: string]> = {
+  cgol: ["Conway's Game of Life", cgol],
+  fact: ["Factorial Calculator", fact, "101"],
+  fib: ["Fibonacci Sequence", fib],
+  bf: ["BF Interpreter", bf, "reverse"],
 }

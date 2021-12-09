@@ -16,12 +16,44 @@ const renderer = new t.WebGLRenderer({ canvas, antialias: true })
 renderer.physicallyCorrectLights = true
 
 const code = document.getElementById("code") as HTMLTextAreaElement
-code.value = examples.fib
+code.value = examples.fib[1]
 const errorBox = document.getElementById("error")!
 const controlsBox = document.getElementById("controls")!
 const speedBox = document.getElementById("speedBox")!
 const speedInput = document.getElementById("speed")!
 const pauseButton = document.getElementById("pause")!
+const input = document.getElementById("input") as HTMLTextAreaElement
+const output = document.getElementById("output") as HTMLTextAreaElement
+
+const examplesBox = document.getElementById("examples")!
+for(let id in examples) {
+  let span = document.createElement("span")
+  span.addEventListener("click", () => {
+    code.value = examples[id][1]
+    let x = "code"
+    if(examples[id][2]) {
+      input.value = examples[id][2]!
+      x = "io"
+    }
+    onChange()
+    switchSection(document.querySelector(`#header > span[data-section='${x}']`)!)
+  })
+  span.textContent = examples[id][0]
+  examplesBox.appendChild(span)
+}
+
+let currentSection: HTMLElement = code
+for(let sectionLink of document.querySelectorAll("#header > span"))
+  sectionLink.addEventListener("click", () => switchSection(sectionLink as HTMLElement))
+function switchSection(sectionLink: HTMLElement){
+  currentSection.style.display = "none"
+  currentSection = document.getElementById(sectionLink.attributes.getNamedItem("data-section")!.value)!
+  currentSection.style.display = "flex"
+    document.querySelector("#header > .selected")!.classList.remove("selected")
+    sectionLink.classList.add("selected")
+}
+
+
 const stepButton = document.getElementById("step")!
 
 let light = new t.DirectionalLight()
@@ -58,6 +90,7 @@ scene.fog = new t.Fog(skyColor, 175, 250)
 
 scene.autoUpdate = false
 
+input.addEventListener("change", onChange)
 code.addEventListener("change", onChange)
 function onChange(){
   for(let k in tiles) {
@@ -69,7 +102,7 @@ function onChange(){
   program?.free()
   program = undefined
   try {
-    program = rs.Program.new(code.value)
+    program = rs.Program.new(code.value, input.value)
   }
   catch (e) {
     errorBox.textContent = `Error: ${e}`
@@ -165,6 +198,7 @@ function tick(){
 
 function updateMosaic(){
   if(!program) return
+  output.value = program.output()
   let { x_min, x_max, y_min, y_max } = program.grid_region()
   for(let x = x_min; x <= x_max; x++)
     for(let y = y_min; y <= y_max; y++) {
