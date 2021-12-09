@@ -16,11 +16,48 @@
       padding: 0;
       margin: 0;
     }
+
+    #code {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100vh;
+      width: 33vw;
+      backdrop-filter: blur(10px);
+      background: #000000aa;
+      display: inline-block;
+      outline: none;
+      border: none;
+      resize: none;
+      box-sizing: border-box;
+      font: Inconsolata;
+      color: white;
+      padding: 10px;
+    }
+
+    ::-webkit-scrollbar {
+      width: 17px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: none;
+    }
+
+    /* Handle */
+    ::-webkit-scrollbar-thumb {
+      background: #ffffff11;
+      background-clip: content-box;
+      border-radius: 10px;
+      border: 5px solid transparent;
+      width:5px;
+      box-sizing: border-box;
+    }
   </style>
 </head>
 
 <body>
   <canvas id="canvas"></canvas>
+  <textarea id="code"></textarea>
   <script src="index.js" type="module"></script>
 </body>
 

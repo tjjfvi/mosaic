@@ -11,10 +11,12 @@ console.log(rs.hi())
 let canvas = document.getElementById("canvas") as HTMLCanvasElement
 
 const scene = new t.Scene()
-const camera = new t.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 250)
+const camera = new t.PerspectiveCamera(75, 0, 0.1, 250)
 const renderer = new t.WebGLRenderer({ canvas, antialias: true })
-renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.physicallyCorrectLights = true
+
+const code = document.getElementById("code") as HTMLTextAreaElement
+code.value = examples.fib
 
 let light = new t.DirectionalLight()
 light.position.set(-2, 5, -10)
@@ -53,8 +55,21 @@ scene.fog = new t.Fog(skyColor, 175, 250)
 
 scene.autoUpdate = false
 
+code.addEventListener("change", () => {
+  for(let k in tiles) {
+    let tile = tiles[k][0]
+    scene.remove(tile)
+    tilePool[tile.name].push(tile)
+    delete tiles[k]
+  }
+  program.free()
+  program = rs.Program.new(code.value)
+  console.log(program)
+  updateMosaic()
+})
+
 let tiles: Record<string, [t.Object3D, string]> = {}
-let program = rs.Program.new(examples.fib)
+let program = rs.Program.new(code.value)
 
 let interval = setInterval(() => {
   if(!program.step())
@@ -87,6 +102,7 @@ function tick(){
   if(canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
     renderer.setSize(window.innerWidth, window.innerHeight)
     camera.aspect = window.innerWidth / window.innerHeight
+    camera.setViewOffset(window.innerWidth * 4 / 3, window.innerHeight, 0, 0, window.innerWidth, window.innerHeight)
     camera.updateProjectionMatrix()
   }
   trackballControls.update()
