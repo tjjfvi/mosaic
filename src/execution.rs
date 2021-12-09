@@ -3,6 +3,8 @@ use crate::*;
 pub struct ProgramState<'a> {
   pub grid: Grid,
   pub call_stack: Vec<ProgramCallStackEntry<'a>>,
+  pub input: &'a [u8],
+  pub output: Vec<u8>,
 }
 
 pub struct ProgramCallStackEntry<'a> {
@@ -11,7 +13,11 @@ pub struct ProgramCallStackEntry<'a> {
   pub statements: &'a Vec<Statement>,
 }
 
-pub fn init_program(grid: Grid, program: &Vec<Statement>) -> ProgramState {
+pub fn init_program<'a>(
+  grid: Grid,
+  program: &'a Vec<Statement>,
+  input: &'a [u8],
+) -> ProgramState<'a> {
   ProgramState {
     grid,
     call_stack: vec![ProgramCallStackEntry {
@@ -19,6 +25,8 @@ pub fn init_program(grid: Grid, program: &Vec<Statement>) -> ProgramState {
       i: 0,
       statements: program,
     }],
+    input,
+    output: Vec::new(),
   }
 }
 
@@ -51,6 +59,77 @@ pub fn step_program(state: &mut ProgramState, pause_on_replace: bool) -> StepPro
           stack_top.cont = stack_top.cont || success;
           if success && pause_on_replace {
             return StepProgramResult::ReplaceSuccess;
+          }
+        }
+        &Statement::Io(io_kind, io_format, pat) => {
+          let mut cell_count_remaining = match io_format {
+            IoFormat::Bin => 8,
+            IoFormat::Char => 1,
+          };
+          let mut n: u8 = match io_kind {
+            IoKind::Input => {
+              let char = match state.input.get(0).copied() {
+                Some(x) if io_format == IoFormat::Char && x.is_ascii_whitespace() => continue,
+                Some(x) => x,
+                None => continue,
+              };
+              char.reverse_bits()
+            }
+            IoKind::Output => 0,
+          };
+          if state
+            .grid
+            .cells
+            .values()
+            .filter(|&&cell| match_pat(cell, pat))
+            .count()
+            < cell_count_remaining
+          {
+            continue;
+          }
+          'search: for x in state.grid.region.x_min..=state.grid.region.x_max {
+            for y in state.grid.region.y_min..=state.grid.region.y_max {
+              if cell_count_remaining == 0 {
+                break 'search;
+              }
+              let pos = (x, y);
+              let cell = state
+                .grid
+                .cells
+                .get(&pos)
+                .copied()
+                .unwrap_or((BLANK, BLANK));
+              if match_pat(cell, pat) {
+                cell_count_remaining -= 1;
+                match (io_kind, io_format) {
+                  (IoKind::Input, IoFormat::Bin) => {
+                    state
+                      .grid
+                      .cells
+                      .insert(pos, (cell.0, if n % 2 == 1 { '1' } else { '0' }));
+                    n /= 2;
+                  }
+                  (IoKind::Input, IoFormat::Char) => {
+                    state
+                      .grid
+                      .cells
+                      .insert(pos, (cell.0, n.reverse_bits().into()));
+                  }
+                  (IoKind::Output, IoFormat::Bin) => {
+                    n *= 2;
+                    n += (cell.1 == '1') as u8;
+                  }
+                  (IoKind::Output, IoFormat::Char) => {
+                    n = cell.1 as u8;
+                  }
+                }
+              }
+            }
+          }
+          if io_kind == IoKind::Output {
+            state.output.push(n);
+          } else {
+            state.input = &state.input[1..]
           }
         }
       }

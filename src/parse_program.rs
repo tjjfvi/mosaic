@@ -18,7 +18,7 @@ pub fn parse_program(input: &str) -> Result<(Grid, Vec<Statement>), &'static str
       }
       let a = input.next().ok_or("Expected cell")?;
       let b = input.next().ok_or("Expected cell")?;
-      if a == ' ' || b == ' ' {
+      if a.is_whitespace() || b.is_whitespace() {
         return Err("Unexpected space");
       }
       let cell = (a, b);
@@ -53,6 +53,27 @@ pub fn parse_program(input: &str) -> Result<(Grid, Vec<Statement>), &'static str
           while input.peek().unwrap_or(&'\n') != &'\n' {
             input.next();
           }
+        }
+        char @ ('i' | 'I' | 'o' | 'O') => {
+          let io_kind = match char {
+            'i' | 'I' => IoKind::Input,
+            _ => IoKind::Output,
+          };
+          let io_format = match char {
+            'i' | 'o' => IoFormat::Char,
+            _ => IoFormat::Bin,
+          };
+          skip_whitespace(&mut input);
+          let a = input.next().ok_or("Expected cell")?;
+          let b = input.next().ok_or("Expected cell")?;
+          if a.is_whitespace() || b.is_whitespace() {
+            return Err("Unexpected space");
+          }
+          let cell = (a, b);
+          group_stack
+            .last_mut()
+            .unwrap()
+            .push(Statement::Io(io_kind, io_format, cell));
         }
         _ => return Err("Unrecognized command"),
       }
@@ -112,8 +133,8 @@ fn parse_rule(
         None => break 'y,
         Some(a) => {
           let b = input.next().ok_or("Expected cell")?;
-          if b == ' ' {
-            return Err("Unexpected space");
+          if b.is_whitespace() {
+            return Err("Unexpected whitespace");
           }
           if divider.map(|d| x > d) == Some(true) {
             if (a, b) != (WILD, WILD) {

@@ -1,13 +1,21 @@
+use std::io::Read;
+
 include!("lib.rs");
 
 pub fn main() {
+  let mut input = Vec::new();
+  std::io::stdin().lock().read_to_end(&mut input).unwrap();
   let path = std::env::args().skip(1).next().expect("Expected file");
   let content = std::fs::read_to_string(path).expect("Expected file");
   let (initial_grid, program) = parse_program(&content).unwrap();
-  let mut program_state = init_program(initial_grid, &program);
+  let mut program_state = init_program(initial_grid, &program, &input[..]);
   while step_program(&mut program_state, false) != StepProgramResult::End {
     print_grid(&program_state.grid)
   }
+  print!(
+    "{}",
+    std::str::from_utf8(&program_state.output[..]).unwrap()
+  )
 }
 
 pub fn print_grid(grid: &Grid) {

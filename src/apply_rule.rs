@@ -36,7 +36,6 @@ pub fn apply_rule(grid: &mut Grid, rule: &Rule) -> bool {
           grid.region.expand_to(pos);
         }
       }
-      // print_grid(&grid);
       return true;
     }
   }

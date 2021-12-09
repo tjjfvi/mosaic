@@ -45,9 +45,22 @@ pub struct Rule {
   pub repl: Grid,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IoKind {
+  Input,
+  Output,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IoFormat {
+  Char,
+  Bin,
+}
+
 #[derive(Debug)]
 pub enum Statement {
   Rule(Rule),
   Loop(Vec<Statement>),
+  Io(IoKind, IoFormat, Cell),
   Debug,
 }
