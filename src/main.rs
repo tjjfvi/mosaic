@@ -5,12 +5,8 @@ pub fn main() {
   let content = std::fs::read_to_string(path).expect("Expected file");
   let (initial_grid, program) = parse_program(&content).unwrap();
   let mut program_state = init_program(initial_grid, &program);
-  loop {
-    match step_program(&mut program_state) {
-      StepProgramResult::Debug => print_grid(&program_state.grid),
-      StepProgramResult::End => break,
-      _ => {}
-    }
+  while step_program(&mut program_state) {
+    print_grid(&program_state.grid)
   }
 }
 
