@@ -1,14 +1,17 @@
-import { allPolyEdges, Point, reconstructPolygon, v } from "./geo"
+import { allPolyEdges, Edge, Point, reconstructPolygon, v } from "./geo"
 import { getSymbolPolygon } from "./getSymbolPolygon"
 import { bspToConvexPolygons, diff, intersect, pointInsideBsp, polygonToBsp } from "./bsp"
 import { makeVoronoi } from "./voronoi"
 import { addGrout } from "./addGrout"
-import { size, bgCellSize, fgCellSize, symbolGrout, thickness, tileSize, colorVariation } from "./constants"
+import { size, bgCellSize, fgCellSize, symbolGrout, thickness, tileSize, groutColor } from "./constants"
 import * as t from "three"
 
 interface Stone {
   poly: Point[],
-  color: t.Color,
+  edges: Edge[],
+  convexPolys: Point[][],
+  mainColor: t.Color,
+  sideColor: t.Color,
   roughness: number,
   metalness: number,
   slantDir: number,
@@ -16,40 +19,52 @@ interface Stone {
   center: Point,
 }
 
-export function createTile(bgColor: t.Color, fgColor: t.Color, symbol: string){
+export function createTile(bg: ColorProfile, fg: ColorProfile, symbol: string): t.Object3D{
   let symbolPoly = getSymbolPolygon(symbol, size)
 
   const stones: Stone[] = []
 
-  for(const [fillColor, isFg, cellSize] of [[bgColor, false, bgCellSize], [fgColor, true, fgCellSize]] as const) {
+  for(const [colorProfile, isFg, cellSize] of [[bg, false, bgCellSize], [fg, true, fgCellSize]] as const) {
     let letterBsp = polygonToBsp(symbolPoly.map(x => addGrout(x, symbolGrout, !isFg)!))
     let voronoi = makeVoronoi(p => isFg === !!pointInsideBsp(letterBsp, p), size, cellSize)
-    for(const poly of voronoi) {
-      let origBsp = polygonToBsp([poly])
+    for(const origPoly of voronoi) {
+      let origBsp = polygonToBsp([origPoly])
       let diffedEdges = [...(isFg ? intersect : diff)(origBsp, letterBsp)]
-      for(let x of reconstructPolygon(diffedEdges)) {
-        let g = addGrout(x)
-        if(g) {
-          let color = new t.Color(fillColor)
-          let hsl = { h: 0, s: 0, l: 0 }
-          color.getHSL(hsl)
-          hsl.h = (1 + hsl.h + (Math.random() - .5) * colorVariation.h) % 1
-          for(let x of ["s", "l"] as const) {
-            hsl[x] = Math.max(Math.min(hsl[x], 1 - colorVariation[x] / 2), colorVariation[x] / 2)
-            hsl[x] += (Math.random() - .5) * colorVariation[x]
-          }
+      for(let polySansGrout of reconstructPolygon(diffedEdges)) {
+        let poly = addGrout(polySansGrout)
+        if(poly) {
+          let [min, max] = getBoundingBox(poly)
+          let convexPolys = [...bspToConvexPolygons(polygonToBsp([poly]), [])]
+          let [convexMin, convexMax] = getBoundingBox(convexPolys.flat())
 
-          color.setHSL(hsl.h, hsl.s, hsl.l)
-          let min = g.reduce((a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1])])
-          let max = g.reduce((a, b) => [Math.max(a[0], b[0]), Math.max(a[1], b[1])])
+          let tolerance = 1
+          if(
+            false
+            || convexMin[0] + tolerance < min[0]
+            || convexMin[1] + tolerance < min[1]
+            || convexMax[0] - tolerance > max[0]
+            || convexMax[1] - tolerance > max[1]
+          )
+            return createTile(bg, fg, symbol)
+
+
+
+          let edges = allPolyEdges([poly])
+
+          let mainColor = sampleColorProfile(colorProfile)
+          let sideColor = getSideColor(colorProfile, mainColor)
+
           let center = [min[0] / 2 + max[0] / 2, min[1] / 2 + max[1] / 2] as const
           let slantDir = Math.random() * Math.PI * 2
           let slantAmount = Math.random() * thickness
           let slantSlope = slantAmount / (v.mag(v.sub(max, min)) * tileSize / size)
 
           stones.push({
-            poly: g,
-            color,
+            poly,
+            edges,
+            convexPolys,
+            mainColor,
+            sideColor,
             roughness: .35 + Math.random() * .05,
             metalness: .05 + Math.random() * .05,
             slantDir,
@@ -85,7 +100,7 @@ function lowResTile(stones: Stone[]){
   const [surface, surfaceMap] = createTexture()
   const [normal, normalMap] = createTexture()
 
-  albedo.fillStyle = rgb(0, 0, 0)
+  albedo.fillStyle = groutColor
   surface.fillStyle = rgb(0, 1, 0)
   normal.fillStyle = rgb(.5, .5, 1)
   for(const ctx of [albedo, surface, normal])
@@ -93,7 +108,7 @@ function lowResTile(stones: Stone[]){
 
 
   for(const stone of stones) {
-    albedo.fillStyle = rgb(stone.color.r, stone.color.g, stone.color.b)
+    albedo.fillStyle = rgb(stone.mainColor.r, stone.mainColor.g, stone.mainColor.b)
     surface.fillStyle = rgb(0, stone.roughness, stone.metalness)
     const h = Math.sqrt(1 / stone.slantSlope ** 2 + 1)
     let x = [Math.cos(stone.slantDir) * .5 / h + .5, -Math.sin(stone.slantDir) * .5 / h + .5, 1 / stone.slantSlope * .5 / h + .5] as const
@@ -131,9 +146,8 @@ function lowResTile(stones: Stone[]){
 function highResTile(stones: Stone[]){
   const tile = new t.Group()
   for(let stone of stones) {
-
-    let edges = allPolyEdges([stone.poly])
-    let polys = [...bspToConvexPolygons(polygonToBsp([stone.poly]), [])]
+    let edges = stone.edges
+    let polys = stone.convexPolys
 
     let slantDirV = v.scl([Math.cos(stone.slantDir), Math.sin(stone.slantDir)], stone.slantSlope * tileSize / size)
 
@@ -166,17 +180,13 @@ function highResTile(stones: Stone[]){
     )
 
     const topMat = new t.MeshStandardMaterial({
-      color: stone.color,
+      color: stone.mainColor,
       roughness: stone.roughness,
       metalness: stone.metalness,
     })
 
-    const sideColor = new t.Color(stone.color)
-    let hsl = { h: 0, s: 0, l: 0 }
-    sideColor.getHSL(hsl)
-    sideColor.setHSL(hsl.h, hsl.s * (1 - hsl.l) ** 5, hsl.l * .5)
     const sideMat = new t.MeshStandardMaterial({
-      color: sideColor,
+      color: stone.sideColor,
     })
 
     const topMesh = new t.Mesh(topGeo, topMat)
@@ -203,4 +213,39 @@ function makeGeo(verts: (readonly [number, number, number])[]){
   geometry.computeVertexNormals()
 
   return geometry
+}
+
+export interface ColorProfile {
+  baseColor: t.Color,
+  variation: { h: number, s: number, l: number },
+  sideMuting: { s: number, l: number },
+}
+
+function sampleColorProfile(profile: ColorProfile){
+  let hsl = profile.baseColor.getHSL({ h: 0, s: 0, l: 0 })
+  hsl.h += (Math.random() - .5) * profile.variation.h
+  hsl.h = (hsl.h + 1) % 1
+  hsl.s += (Math.random() - .5) * profile.variation.s
+  hsl.s = Math.max(Math.min(hsl.s, 1), 0)
+  hsl.l += (Math.random() - .5) * profile.variation.l
+  hsl.l = Math.max(Math.min(hsl.l, 1), 0)
+  let color = new t.Color()
+  color.setHSL(hsl.h, hsl.s, hsl.l)
+  return color
+}
+
+function getSideColor(profile: ColorProfile, primary: t.Color){
+  let hsl = primary.getHSL({ h: 0, s: 0, l: 0 })
+  hsl.s *= profile.sideMuting.s
+  hsl.l *= profile.sideMuting.l
+  let color = new t.Color()
+  color.setHSL(hsl.h, hsl.s, hsl.l)
+  return color
+}
+
+function getBoundingBox(poly: Point[]): [Point, Point]{
+  return [
+    poly.reduce((a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1])]),
+    poly.reduce((a, b) => [Math.max(a[0], b[0]), Math.max(a[1], b[1])]),
+  ]
 }

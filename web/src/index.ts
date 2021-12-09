@@ -1,6 +1,6 @@
 import * as rs from "../pkg/index.js"
-import { createTile } from "./tileObj"
-import { tileSize } from "./constants"
+import { ColorProfile, createTile } from "./tileObj"
+import { groutColor, skyColor, tileSize } from "./constants"
 import { examples } from "./examples"
 import * as t from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
@@ -16,7 +16,7 @@ const renderer = new t.WebGLRenderer({ canvas, antialias: true })
 renderer.physicallyCorrectLights = true
 
 const code = document.getElementById("code") as HTMLTextAreaElement
-code.value = examples.fib
+code.value = examples.cgol
 const errorBox = document.getElementById("error")!
 const controlsBox = document.getElementById("controls")!
 const speedBox = document.getElementById("speedBox")!
@@ -31,8 +31,6 @@ light.updateMatrixWorld()
 scene.add(light)
 scene.add(new t.AmbientLight(0xffffff, 2))
 
-const groutColor = "#141921"
-const skyColor = "#4f5e80"
 const [skyBoxUp, skyBoxDown, skyBoxSide] = [[skyColor, skyColor], [groutColor, groutColor], [skyColor, groutColor]].map(([a, b]) => {
   let canvas = document.createElement("canvas")
   canvas.width = 1000
@@ -162,8 +160,6 @@ function tick(){
   renderer.render(scene, camera)
 }
 
-
-const fg = new t.Color("#fff")
 function updateMosaic(){
   if(!program) return
   let { x_min, x_max, y_min, y_max } = program.grid_region()
@@ -181,7 +177,7 @@ function updateMosaic(){
       if((str ?? "..") !== "..") {
         let color = getColor(str![0])
         let char = str![1] === "." ? " " : str![1]
-        let tile = getTile(color, fg, char)
+        let tile = getTile(color, fgColorProfile, char)
         tile.position.set(x * tileSize, 0, y * tileSize)
         tile.updateMatrixWorld()
         scene.add(tile)
@@ -192,8 +188,26 @@ function updateMosaic(){
     }
 }
 
-let colors: Record<string, t.Color> = {
-  ".": new t.Color("#111"),
+
+const fgColorProfile: ColorProfile = {
+  baseColor: new t.Color("#ddd"),
+  variation: { h: 0, s: 0, l: .5 },
+  sideMuting: { s: 0, l: .8 },
+}
+const bgColorProfile: Omit<ColorProfile, "baseColor"> = {
+  variation: { h: .075, s: .1, l: .3 },
+  sideMuting: { s: .7, l: .8 },
+}
+let colors: Record<string, ColorProfile> = {
+  ".": {
+    baseColor: (() => {
+      let hsl = new t.Color(groutColor).getHSL({ h: 0, s: 0, l: 0 })
+      hsl.l += .04
+      return new t.Color().setHSL(hsl.h, hsl.s, hsl.l)
+    })(),
+    variation: { h: .05, s: .05, l: .08 },
+    sideMuting: { s: 1, l: 1 },
+  },
 }
 function getColor(c: string){
   if(colors[c])
@@ -202,13 +216,13 @@ function getColor(c: string){
   let n = c.charCodeAt(0)
   let hue = Math.random() * 256 | 0 // (n * ~n) % 256
   color.setHSL(hue / 256, .9, .4)
-  return colors[c] = color
+  return colors[c] = { ...bgColorProfile, baseColor: color }
 }
 
 
 let tilePool: Record<string, t.Object3D[]> = {}
-function getTile(bg: t.Color, fg: t.Color, symb: string){
-  let key = [bg.r, bg.b, bg.g, fg.r, fg.g, fg.b, symb].join(",")
+function getTile(bg: ColorProfile, fg: ColorProfile, symb: string){
+  let key = JSON.stringify({ bg, fg, symb })
   let existing = (tilePool[key] ??= []).pop()
   if(existing) return existing
   let tile = createTile(bg, fg, symb)

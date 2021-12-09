@@ -5,8 +5,5 @@ export const fgCellSize = size / 17
 export const symbolGrout = .1
 export const tileSize = 10
 export const thickness = .1
-export const colorVariation = {
-  h: .075,
-  s: .1,
-  l: .3,
-}
+export const groutColor = "#141921"
+export const skyColor = "#4f5e80"
