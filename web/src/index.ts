@@ -5,14 +5,13 @@ import { examples } from "./examples"
 import * as t from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls"
-import { Object3D } from "three"
 
 console.log(rs.hi())
 
 let canvas = document.getElementById("canvas") as HTMLCanvasElement
 
 const scene = new t.Scene()
-const camera = new t.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200)
+const camera = new t.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 250)
 const renderer = new t.WebGLRenderer({ canvas, antialias: true })
 renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.physicallyCorrectLights = true
@@ -24,19 +23,44 @@ light.updateMatrixWorld()
 scene.add(light)
 scene.add(new t.AmbientLight(0xffffff, 2))
 
-scene.updateMatrixWorld = function(force: boolean){
-  if(force)
-    Object3D.prototype.updateMatrixWorld.call(this, force)
-}
+const groutColor = "#141921"
+const skyColor = "#4f5e80"
+const [skyBoxUp, skyBoxDown, skyBoxSide] = [[skyColor, skyColor], [groutColor, groutColor], [skyColor, groutColor]].map(([a, b]) => {
+  let canvas = document.createElement("canvas")
+  canvas.width = 1000
+  canvas.height = 1000
+  let ctx = canvas.getContext("2d")!
+  let grd = ctx.createLinearGradient(0, 0, 0, 500)
+  grd.addColorStop(0, a)
+  grd.addColorStop(1, b)
+  ctx.fillStyle = grd
+  ctx.fillRect(0, 0, 1000, 500)
+  ctx.fillStyle = b
+  ctx.fillRect(0, 500, 1000, 500)
+  return canvas
+})
+scene.background = new t.CubeTexture([
+  skyBoxSide,
+  skyBoxSide,
+  skyBoxUp,
+  skyBoxDown,
+  skyBoxSide,
+  skyBoxSide,
+])
+scene.background.needsUpdate = true
+scene.fog = new t.Fog(skyColor, 175, 250)
+
+
+scene.autoUpdate = false
 
 let tiles: Record<string, [t.Object3D, string]> = {}
-let program = rs.Program.new(examples.cgol)
+let program = rs.Program.new(examples.fib)
 
 let interval = setInterval(() => {
   if(!program.step())
     clearTimeout(interval)
   updateMosaic()
-}, 1000)
+}, 300)
 
 camera.position.set(0, 50, 0)
 
@@ -73,6 +97,7 @@ function tick(){
 }
 
 
+const fg = new t.Color("#fff")
 function updateMosaic(){
   let { x_min, x_max, y_min, y_max } = program.grid_region()
   for(let x = x_min; x <= x_max; x++)
@@ -87,8 +112,9 @@ function updateMosaic(){
         tilePool[tile.name]!.push(tile)
       }
       if((str ?? "..") !== "..") {
-        console.log(str![1])
-        let tile = getTile("#05f", "#0f5", str![1])
+        let color = getColor(str![0])
+        let char = str![1] === "." ? " " : str![1]
+        let tile = getTile(color, fg, char)
         tile.position.set(x * tileSize, 0, y * tileSize)
         tile.updateMatrixWorld()
         scene.add(tile)
@@ -99,9 +125,23 @@ function updateMosaic(){
     }
 }
 
+let colors: Record<string, t.Color> = {
+  ".": new t.Color("#111"),
+}
+function getColor(c: string){
+  if(colors[c])
+    return colors[c]
+  let color = new t.Color()
+  let n = c.charCodeAt(0)
+  let hue = Math.random() * 256 | 0 // (n * ~n) % 256
+  color.setHSL(hue / 256, .9, .4)
+  return colors[c] = color
+}
+
+
 let tilePool: Record<string, t.Object3D[]> = {}
-function getTile(bg: string, fg: string, symb: string){
-  let key = `${bg}/${fg}/${symb}`
+function getTile(bg: t.Color, fg: t.Color, symb: string){
+  let key = [bg.r, bg.b, bg.g, fg.r, fg.g, fg.b, symb].join(",")
   let existing = (tilePool[key] ??= []).pop()
   if(existing) return existing
   let tile = createTile(bg, fg, symb)

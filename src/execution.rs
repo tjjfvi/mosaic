@@ -39,6 +39,9 @@ pub fn step_program(state: &mut ProgramState) -> bool {
           Statement::Rule(rule) => {
             let success = apply_rule(&mut state.grid, rule);
             stack_top.cont = stack_top.cont || success;
+            if success {
+              return true;
+            }
           }
         }
       } else {

@@ -3,7 +3,7 @@ import { getSymbolPolygon } from "./getSymbolPolygon"
 import { bspToConvexPolygons, diff, intersect, pointInsideBsp, polygonToBsp } from "./bsp"
 import { makeVoronoi } from "./voronoi"
 import { addGrout } from "./addGrout"
-import { size, bgCellSize, fgCellSize, symbolGrout, thickness, tileSize } from "./constants"
+import { size, bgCellSize, fgCellSize, symbolGrout, thickness, tileSize, colorVariation } from "./constants"
 import * as t from "three"
 
 interface Stone {
@@ -16,7 +16,7 @@ interface Stone {
   center: Point,
 }
 
-export function createTile(bgColor: string, fgColor: string, symbol: string){
+export function createTile(bgColor: t.Color, fgColor: t.Color, symbol: string){
   let symbolPoly = getSymbolPolygon(symbol, size)
 
   const stones: Stone[] = []
@@ -33,9 +33,12 @@ export function createTile(bgColor: string, fgColor: string, symbol: string){
           let color = new t.Color(fillColor)
           let hsl = { h: 0, s: 0, l: 0 }
           color.getHSL(hsl)
-          hsl.h += (Math.random() - .5) * .075
-          hsl.s += (Math.random() - .5) * .1
-          hsl.l += (Math.random() - .5) * .2
+          hsl.h = (1 + hsl.h + (Math.random() - .5) * colorVariation.h) % 1
+          for(let x of ["s", "l"] as const) {
+            hsl[x] = Math.max(Math.min(hsl[x], 1 - colorVariation[x] / 2), colorVariation[x] / 2)
+            hsl[x] += (Math.random() - .5) * colorVariation[x]
+          }
+
           color.setHSL(hsl.h, hsl.s, hsl.l)
           let min = g.reduce((a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1])])
           let max = g.reduce((a, b) => [Math.max(a[0], b[0]), Math.max(a[1], b[1])])
@@ -171,7 +174,7 @@ function highResTile(stones: Stone[]){
     const sideColor = new t.Color(stone.color)
     let hsl = { h: 0, s: 0, l: 0 }
     sideColor.getHSL(hsl)
-    sideColor.setHSL(hsl.h, hsl.s * .7, hsl.l * .5)
+    sideColor.setHSL(hsl.h, hsl.s * (1 - hsl.l) ** 5, hsl.l * .5)
     const sideMat = new t.MeshStandardMaterial({
       color: sideColor,
     })
