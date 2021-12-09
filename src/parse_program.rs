@@ -49,6 +49,11 @@ pub fn parse_program(input: &str) -> Result<(Grid, Vec<Statement>), &'static str
             return Err("Unmatched ']'");
           }
         }
+        '#' => {
+          while input.peek().unwrap_or(&'\n') != &'\n' {
+            input.next();
+          }
+        }
         _ => return Err("Unrecognized command"),
       }
     } else if input.peek() != None {

@@ -17,6 +17,12 @@ renderer.physicallyCorrectLights = true
 
 const code = document.getElementById("code") as HTMLTextAreaElement
 code.value = examples.fib
+const errorBox = document.getElementById("error")!
+const controlsBox = document.getElementById("controls")!
+const speedBox = document.getElementById("speedBox")!
+const speedInput = document.getElementById("speed")!
+const pauseButton = document.getElementById("pause")!
+const stepButton = document.getElementById("step")!
 
 let light = new t.DirectionalLight()
 light.position.set(-2, 5, -10)
@@ -52,30 +58,74 @@ scene.background = new t.CubeTexture([
 scene.background.needsUpdate = true
 scene.fog = new t.Fog(skyColor, 175, 250)
 
-
 scene.autoUpdate = false
 
-code.addEventListener("change", () => {
+code.addEventListener("change", onChange)
+function onChange(){
   for(let k in tiles) {
     let tile = tiles[k][0]
     scene.remove(tile)
     tilePool[tile.name].push(tile)
     delete tiles[k]
   }
-  program.free()
-  program = rs.Program.new(code.value)
+  program?.free()
+  program = undefined
+  try {
+    program = rs.Program.new(code.value)
+  }
+  catch (e) {
+    errorBox.textContent = `Error: ${e}`
+    controlsBox.style.display = "none"
+    return
+  }
+  errorBox.textContent = ""
+  controlsBox.style.display = "flex"
   console.log(program)
-  updateMosaic()
-})
+  run()
+}
 
 let tiles: Record<string, [t.Object3D, string]> = {}
-let program = rs.Program.new(code.value)
+let program: rs.Program | undefined
+let paused = false
+let speed = 100
 
-let interval = setInterval(() => {
-  if(!program.step())
-    clearTimeout(interval)
+pauseButton.addEventListener("click", () => {
+  paused = !paused
+  pauseButton.textContent = paused ? "Play" : "Pause"
+  if(!paused) {
+    clearTimeout(timeout)
+    run()
+  }
+})
+
+speedInput.addEventListener("blur", () => {
+  let newSpeed = +speedInput.textContent!
+  if(isNaN(newSpeed)) newSpeed = speed
+  if(newSpeed < 10) newSpeed = 10
+  speed = newSpeed
+  speedInput.textContent = speed + ""
+  clearTimeout(timeout)
+  run()
+})
+
+stepButton.addEventListener("click", step)
+
+speedBox.addEventListener("click", () => {
+  speedInput.focus()
+})
+
+let timeout: number | undefined
+function run(){
+  if(!paused && step())
+    timeout = setTimeout(run, speed)
+}
+
+function step(){
+  if(!program) return false
+  let r = program.step()
   updateMosaic()
-}, 300)
+  return r
+}
 
 camera.position.set(0, 50, 0)
 
@@ -115,6 +165,7 @@ function tick(){
 
 const fg = new t.Color("#fff")
 function updateMosaic(){
+  if(!program) return
   let { x_min, x_max, y_min, y_max } = program.grid_region()
   for(let x = x_min; x <= x_max; x++)
     for(let y = y_min; y <= y_max; y++) {
@@ -165,5 +216,5 @@ function getTile(bg: t.Color, fg: t.Color, symb: string){
   return tile
 }
 
-updateMosaic()
+onChange()
 tick()

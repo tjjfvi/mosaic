@@ -30,9 +30,58 @@
       border: none;
       resize: none;
       box-sizing: border-box;
-      font: Inconsolata;
+      font-family: Inconsolata, monospace;
       color: white;
       padding: 10px;
+      border-bottom: 60px solid transparent;
+    }
+
+    #controls, #error {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      width: calc(33vw - 20px);
+      height: 40px;
+      display: flex;
+      font-family: Inconsolata, monospace;
+    }
+
+    #error {
+      color: red;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #controls {
+      color: white;
+      justify-content: stretch;
+      align-items: stretch;
+    }
+
+    #controls > * {
+      flex: 1 0;
+      width: 0px;
+    }
+
+    #controls button {
+      background: none;
+      color: white;
+      font: inherit;
+      border: none;
+      outline: none;
+      padding: none;
+      cursor: pointer;
+    }
+
+    #controls #speedBox {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: text;
+    }
+
+    #controls #speed {
+      outline: none;
     }
 
     ::-webkit-scrollbar {
@@ -58,6 +107,15 @@
 <body>
   <canvas id="canvas"></canvas>
   <textarea id="code"></textarea>
+  <div id="error"></div>
+  <div id="controls">
+    <span id="speedBox">
+      <span style="white-space: pre">Delay: </span>
+      <span contenteditable id="speed">100</span>
+    </span>
+    <button id="pause">Pause</button>
+    <button id="step">Step</button>
+  </div>
   <script src="index.js" type="module"></script>
 </body>
 
