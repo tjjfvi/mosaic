@@ -20,8 +20,12 @@ impl Program {
     })
   }
   #[wasm_bindgen]
-  pub fn step(&mut self) -> bool {
-    step_program(&mut self.state)
+  pub fn step(&mut self) -> Option<bool> {
+    match step_program(&mut self.state, true) {
+      StepProgramResult::ReplaceSuccess => Some(false),
+      StepProgramResult::Debug => Some(true),
+      StepProgramResult::End => None,
+    }
   }
   #[wasm_bindgen]
   pub fn grid_region(&self) -> JsRegion {

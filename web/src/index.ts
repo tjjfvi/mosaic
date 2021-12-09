@@ -16,7 +16,7 @@ const renderer = new t.WebGLRenderer({ canvas, antialias: true })
 renderer.physicallyCorrectLights = true
 
 const code = document.getElementById("code") as HTMLTextAreaElement
-code.value = examples.cgol
+code.value = examples.fib
 const errorBox = document.getElementById("error")!
 const controlsBox = document.getElementById("controls")!
 const speedBox = document.getElementById("speedBox")!
@@ -114,8 +114,11 @@ speedBox.addEventListener("click", () => {
 
 let timeout: number | undefined
 function run(){
-  if(!paused && step())
-    timeout = setTimeout(run, speed)
+  if(!paused) {
+    let r = step()
+    if(r !== null)
+      timeout = setTimeout(run, r ? Math.max(500, speed) : speed)
+  }
 }
 
 function step(){
@@ -214,7 +217,7 @@ function getColor(c: string){
     return colors[c]
   let color = new t.Color()
   let n = c.charCodeAt(0)
-  let hue = Math.random() * 256 | 0 // (n * ~n) % 256
+  let hue = Math.random() * 256// (n * ~n) % 256
   color.setHSL(hue / 256, .9, .4)
   return colors[c] = { ...bgColorProfile, baseColor: color }
 }

@@ -11,6 +11,7 @@ X. X. .. .. .. .. .. .. .. .. X. .. .. .. X. .. X. X. .. .. .. .. X. .. X.
 [
   .
 
+  # This could be done more programmatically, but it wouldn't look as good
   [
     X_ X_ X_  __ __ __
     ._ _. ._  __ _* __
