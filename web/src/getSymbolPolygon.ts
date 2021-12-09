@@ -14,7 +14,9 @@ export function getSymbolPolygon(symbol: string, size: number){
   let path = font.getPath(
     symbol,
     size / 2 - (bb.x2 + bb.x1) / 2,
-    size / 2 + (font.tables.os2.sCapHeight) * fontSize / font.unitsPerEm / 2 - Math.max(bb.y2 / 2, 0),
+    symbol === "*"
+      ? size / 2 - (bb.y2 + bb.y1) / 2
+      : size / 2 + (font.tables.os2.sCapHeight) * fontSize / font.unitsPerEm / 2 - Math.max(bb.y2 / 2, 0),
     fontSize,
   )
   if(!path.commands.length) return []
