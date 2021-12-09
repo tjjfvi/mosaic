@@ -12,6 +12,11 @@ module.exports = {
   module: {
     rules: [
       {
+        test: /\.mosaic$/,
+        use: 'raw-loader',
+        exclude: /node_modules/,
+      },
+      {
         test: /\.(woff|ttf)$/,
         use: 'arraybuffer-loader',
         exclude: /node_modules/,

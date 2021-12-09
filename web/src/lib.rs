@@ -24,7 +24,7 @@ impl Program {
     step_program(&mut self.state)
   }
   #[wasm_bindgen]
-  pub fn grid_min_x(&self) -> JsRegion {
+  pub fn grid_region(&self) -> JsRegion {
     let Region {
       x_min,
       y_min,
@@ -40,7 +40,7 @@ impl Program {
     }
   }
   #[wasm_bindgen]
-  pub fn grid_get_0(&self, x: isize, y: isize) -> Option<JsCell> {
+  pub fn grid_get(&self, x: isize, y: isize) -> Option<JsCell> {
     self
       .state
       .grid

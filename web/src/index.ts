@@ -1,10 +1,11 @@
 import * as rs from "../pkg/index.js"
 import { createTile } from "./tileObj"
+import { tileSize } from "./constants"
+import { examples } from "./examples"
 import * as t from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls"
 import { Object3D } from "three"
-import { tileSize } from "./constants"
 
 console.log(rs.hi())
 
@@ -28,15 +29,14 @@ scene.updateMatrixWorld = function(force: boolean){
     Object3D.prototype.updateMatrixWorld.call(this, force)
 }
 
-const chunkSize = 10
-let tiles = [...Array(20)].map(x => createTile("#03f", "#0f3", "&"))
-for(let i = 0; i < chunkSize; i++)
-  for(let j = 0; j < chunkSize; j++) {
-    let tile = tiles[(Math.random() * 20) | 0].clone()
-    tile.position.set(i * tileSize, 0, j * tileSize)
-    scene.add(tile)
-    tile.updateMatrixWorld()
-  }
+let tiles: Record<string, [t.Object3D, string]> = {}
+let program = rs.Program.new(examples.cgol)
+
+let interval = setInterval(() => {
+  if(!program.step())
+    clearTimeout(interval)
+  updateMosaic()
+}, 1000)
 
 camera.position.set(0, 50, 0)
 
@@ -58,7 +58,6 @@ trackballControls.target = orbitControls.target
 
 orbitControls.maxPolarAngle = Math.PI * .45
 
-tick()
 function tick(){
   window.requestAnimationFrame(tick)
   if(canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
@@ -72,3 +71,43 @@ function tick(){
   orbitControls.update()
   renderer.render(scene, camera)
 }
+
+
+function updateMosaic(){
+  let { x_min, x_max, y_min, y_max } = program.grid_region()
+  for(let x = x_min; x <= x_max; x++)
+    for(let y = y_min; y <= y_max; y++) {
+      let key = `${x},${y}`
+      let cell = program.grid_get(x, y)
+      let str = cell ? cell.color + cell.symbol : undefined
+      if((tiles[key]?.[1] ?? "..") === (str ?? "..")) continue
+      if(tiles[key]) {
+        let tile = tiles[key][0]
+        scene.remove(tile)
+        tilePool[tile.name]!.push(tile)
+      }
+      if((str ?? "..") !== "..") {
+        console.log(str![1])
+        let tile = getTile("#05f", "#0f5", str![1])
+        tile.position.set(x * tileSize, 0, y * tileSize)
+        tile.updateMatrixWorld()
+        scene.add(tile)
+        tiles[key] = [tile, str!]
+      }
+      else
+        delete tiles[key]
+    }
+}
+
+let tilePool: Record<string, t.Object3D[]> = {}
+function getTile(bg: string, fg: string, symb: string){
+  let key = `${bg}/${fg}/${symb}`
+  let existing = (tilePool[key] ??= []).pop()
+  if(existing) return existing
+  let tile = createTile(bg, fg, symb)
+  tile.name = key
+  return tile
+}
+
+updateMosaic()
+tick()
