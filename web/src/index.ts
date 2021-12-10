@@ -16,7 +16,7 @@ const renderer = new t.WebGLRenderer({ canvas, antialias: true })
 renderer.physicallyCorrectLights = true
 
 const code = document.getElementById("code") as HTMLTextAreaElement
-code.value = examples.fib[1]
+code.value = examples.logo[1]
 const errorBox = document.getElementById("error")!
 const controlsBox = document.getElementById("controls")!
 const speedBox = document.getElementById("speedBox")!
@@ -212,9 +212,8 @@ function updateMosaic(){
         tilePool[tile.name]!.push(tile)
       }
       if((str ?? "..") !== "..") {
-        let color = getColor(str![0])
         let char = str![1] === "." ? " " : str![1]
-        let tile = getTile(color, fgColorProfile, char)
+        let tile = getTile(...getColor(str![0]), char)
         tile.position.set(x * tileSize, 0, y * tileSize)
         tile.updateMatrixWorld()
         scene.add(tile)
@@ -226,34 +225,42 @@ function updateMosaic(){
 }
 
 
-const fgColorProfile: ColorProfile = {
+const whiteColorProfile: ColorProfile = {
   baseColor: new t.Color("#ddd"),
   variation: { h: 0, s: 0, l: .5 },
   sideMuting: { s: 0, l: .8 },
+}
+const blackColorProfile:ColorProfile = {
+  baseColor: (() => {
+    let hsl = new t.Color(groutColor).getHSL({ h: 0, s: 0, l: 0 })
+    hsl.l += .04
+    return new t.Color().setHSL(hsl.h, hsl.s, hsl.l)
+  })(),
+  variation: { h: .05, s: .05, l: .08 },
+  sideMuting: { s: 1, l: 1 },
 }
 const bgColorProfile: Omit<ColorProfile, "baseColor"> = {
   variation: { h: .075, s: .1, l: .3 },
   sideMuting: { s: .7, l: .8 },
 }
-let colors: Record<string, ColorProfile> = {
-  ".": {
-    baseColor: (() => {
-      let hsl = new t.Color(groutColor).getHSL({ h: 0, s: 0, l: 0 })
-      hsl.l += .04
-      return new t.Color().setHSL(hsl.h, hsl.s, hsl.l)
-    })(),
-    variation: { h: .05, s: .05, l: .08 },
-    sideMuting: { s: 1, l: 1 },
-  },
+let colors: Record<string, [ColorProfile, ColorProfile]> = {
+  ".": [blackColorProfile, whiteColorProfile],
+  "!": [whiteColorProfile, blackColorProfile],
 }
+let hues = [..."}5x#)1?ck,7d&h>l<$bq%6'to~9^fm;3@zre|]2p:ai(\"sj\\8gwu/0*{y4`n[v"]
 function getColor(c: string){
   if(colors[c])
     return colors[c]
   let color = new t.Color()
   let n = c.charCodeAt(0)
-  let hue = Math.random() * 256// (n * ~n) % 256
-  color.setHSL(hue / 256, .9, .4)
-  return colors[c] = { ...bgColorProfile, baseColor: color }
+  let hueInd = hues.indexOf(c.toLowerCase())
+  let hue = hueInd === -1 ? Math.random() : hueInd / hues.length
+  let isLower = c === c.toLowerCase()
+  color.setHSL(hue, .9, .3)
+  colors[c] = [{ ...bgColorProfile, baseColor: color }, whiteColorProfile]
+  if(!isLower)
+    colors[c].reverse()
+  return colors[c]
 }
 
 

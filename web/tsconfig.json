@@ -6,5 +6,6 @@
     "module": "esnext",
     "composite": true,
     "types": [],
+    "allowSyntheticDefaultImports": true,
   },
 }
