@@ -16,7 +16,6 @@ const renderer = new t.WebGLRenderer({ canvas, antialias: true })
 renderer.physicallyCorrectLights = true
 
 const code = document.getElementById("code") as HTMLTextAreaElement
-code.value = examples.logo[1]
 const errorBox = document.getElementById("error")!
 const controlsBox = document.getElementById("controls")!
 const speedBox = document.getElementById("speedBox")!
@@ -24,6 +23,9 @@ const speedInput = document.getElementById("speed")!
 const pauseButton = document.getElementById("pause")!
 const input = document.getElementById("input") as HTMLTextAreaElement
 const output = document.getElementById("output") as HTMLTextAreaElement
+
+code.value = examples.cgol[1]
+input.value = examples.cgol[2]!
 
 const examplesBox = document.getElementById("examples")!
 for(let id in examples) {
@@ -42,7 +44,7 @@ for(let id in examples) {
   examplesBox.appendChild(span)
 }
 
-let currentSection: HTMLElement = code
+let currentSection: HTMLElement = examplesBox
 for(let sectionLink of document.querySelectorAll("#header > span"))
   sectionLink.addEventListener("click", () => switchSection(sectionLink as HTMLElement))
 function switchSection(sectionLink: HTMLElement){
@@ -245,20 +247,26 @@ const bgColorProfile: Omit<ColorProfile, "baseColor"> = {
 }
 let colors: Record<string, [ColorProfile, ColorProfile]> = {
   ".": [blackColorProfile, whiteColorProfile],
+  ",": [blackColorProfile, whiteColorProfile],
   "!": [whiteColorProfile, blackColorProfile],
 }
-let hues = [..."}5x#)1?ck,7d&h>l<$bq%6'to~9^fm;3@zre|]2p:ai(\"sj\\8gwu/0*{y4`n[v"]
+let lower = [..."abcdefghijklmnopqrstuvwxyz0123456789`-=/;'[]\\"]
+let upper = [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ)>@#$%^&*(~+<?:\"{}|"]
+let hues =  [..."qzj5upi;c2oes7hyvl-/4w8n`1rag'=t[km93fx\\6d]0b"]
+let foo = hues.map((x, i) => x + x + " " + upper[lower.indexOf(x)] + upper[lower.indexOf(x)])
+console.log(lower.map((x, i) => x + x + " " + upper[i] + upper[i] + " .. " + foo[i]).join("\n"))
 function getColor(c: string){
   if(colors[c])
     return colors[c]
   let color = new t.Color()
   let n = c.charCodeAt(0)
-  let hueInd = hues.indexOf(c.toLowerCase())
+  let isUpper = upper.includes(c)
+  let lowerVersion = isUpper ? lower[upper.indexOf(c)] : c
+  let hueInd = hues.indexOf(lowerVersion)
   let hue = hueInd === -1 ? Math.random() : hueInd / hues.length
-  let isLower = c === c.toLowerCase()
   color.setHSL(hue, .9, .3)
   colors[c] = [{ ...bgColorProfile, baseColor: color }, whiteColorProfile]
-  if(!isLower)
+  if(isUpper)
     colors[c].reverse()
   return colors[c]
 }
