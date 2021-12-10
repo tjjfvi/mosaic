@@ -1,5 +1,7 @@
 j^ i#
 
+# Reading the input:
+
 [
   [
     i i#
@@ -25,12 +27,15 @@ j^ i#
 
 j^  ..
 
+# Evolving the pattern:
+
 [
-  .
+  . # debug; linger on this frame
 
   [
-    # This could be done more programmatically,
-    # but it wouldn't look as good
+    # Mark cells that will be alive next generation with an asterisk.
+    # These replacement rules were exhaustively generated for aesthetics during execution.
+    # Implementing the evolution could be done less verbosely, but it wouldn't look as good.
 
     !_ !_ !_  __ __ __
     ._ _. ._  __ _* __
@@ -255,7 +260,6 @@ j^  ..
     ._ ._ ._  __ __ __
     ._ _. ._  __ _* __
     !_ !_ !_  __ __ __
-
     
     !_ !_ ._  __ __ __
     ._ !. ._  __ _* __
@@ -369,11 +373,12 @@ j^  ..
     ._ !. ._  __ _* __
     ._ !_ !_  __ __ __
   ]
+  # Kill cells without an asterisk
   [
     !.  ..
   ]
+  # Set cells with an asterisk to live, removing the asterisk
   [
     _*  !.
   ]
-  .
 ]

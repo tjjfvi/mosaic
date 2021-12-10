@@ -150,9 +150,10 @@ speedBox.addEventListener("click", () => {
 let timeout: number | undefined
 function run(){
   if(!paused) {
+    let t = Date.now()
     let r = step()
     if(r !== null)
-      timeout = setTimeout(run, speed * 2)
+      timeout = setTimeout(run, (r ? speed * 3 : speed) - (Date.now() - t))
   }
 }
 
