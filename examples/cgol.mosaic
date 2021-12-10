@@ -1,34 +1,52 @@
 j^ i#
 
-# Reading the input:
+# The initial mosaic has two marking tiles for reading input,
+# a start-of-line marker (`j^`) and cursor (`i#`)
 
+#
+# Reading the input (`X` for live, `.` for dead):
+#
 [
   [
+    # Input into the cursor tile
     i i#
 
+    # If there is still an `i#` tile, the end of a line was reached; add an end-of-line marker
     i#  j$
 
+    # Otherwise, mark the spot for the next cursor
     i_ ..  i_ j#
 
+    # Convert `X`s to live cells
     iX  !.
 
+    # Convert the rest to dead cells
     i_  ..
 
+    # Change the `j#` to a cursor to continue the loop
     j#  i#
   ]
 
+  # End of line was reached
+
+  # If the first character matches `_.` (if it's not the end-of-line marker),
+  # move the start-of-line marker to the next line and make a new cursor
   j^ _.  .. _.
   .. ..  j^ i#
 ]
 
+# Clear the end-of-line markers
 [
   j$  ..
 ]
 
+# Remove the start-of-line marker
 j^  ..
 
-# Evolving the pattern:
 
+#
+# Evolving the pattern:
+#
 [
   . # debug; linger on this frame
 

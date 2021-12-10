@@ -92,8 +92,8 @@ scene.fog = new t.Fog(skyColor, 175, 250)
 
 scene.autoUpdate = false
 
-input.addEventListener("change", onChange)
-code.addEventListener("change", onChange)
+input.addEventListener("blur", onChange)
+code.addEventListener("blur", onChange)
 function onChange(){
   for(let k in tiles) {
     let tile = tiles[k][0]

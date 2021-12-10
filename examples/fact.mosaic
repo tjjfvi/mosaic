@@ -1,6 +1,9 @@
 
 a.
 
+#
+# Reads the input (as binary string, e.g. `5` as `"101"`):
+#
 [
   i a.
 
@@ -14,6 +17,13 @@ A.  ..
 a_ ..  A_ ..
 .. ..  b1 ..
 
+#
+# Cacluates the factorial
+#
+
+# This starts a multiplicative accumulator at `1`,
+# and continually multiplies it by `n` and then decreases `n`.
+# Does all computations in binary.
 [
   [
     A1  A1
@@ -113,6 +123,9 @@ a_ ..  A_ ..
   a_  A_
 ]
 
+#
+# Outputs the factorial (as binary string, e.g. `120` as `"1111000"`):
+#
 [
   o r_
 

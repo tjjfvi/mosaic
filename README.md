@@ -1,4 +1,4 @@
-# `mosaic`
+# [`mosaic`](https://github.com/tjjfvi/mosaic)
 
 _An esoteric programming language which performs computations by creating
 beautiful mosaic patterns_
@@ -239,3 +239,9 @@ a. a. a. a. a. a. a. a.
 The `.` command acts as a debug statement. In the command line version, this
 prints a textual representation of the mosaic; in the visual interpreter, it
 adds additional delay to the frame.
+
+### Comments
+
+Comments start with a `#` and a space, and continue to the end of the line.
+
+Comments are only allowed in the instruction area, not the initial mosaic.
