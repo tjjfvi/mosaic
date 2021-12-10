@@ -66,17 +66,6 @@ pub fn step_program(state: &mut ProgramState, pause_on_replace: bool) -> StepPro
             IoFormat::Bin => 8,
             IoFormat::Char => 1,
           };
-          let mut n: u8 = match io_kind {
-            IoKind::Input => {
-              let char = match state.input.get(0).copied() {
-                Some(x) if io_format == IoFormat::Char && x.is_ascii_whitespace() => continue,
-                Some(x) => x,
-                None => continue,
-              };
-              char.reverse_bits()
-            }
-            IoKind::Output => 0,
-          };
           if state
             .grid
             .cells
@@ -87,6 +76,21 @@ pub fn step_program(state: &mut ProgramState, pause_on_replace: bool) -> StepPro
           {
             continue;
           }
+          let mut n: u8 = match io_kind {
+            IoKind::Input => {
+              let char = state.input.get(0).copied();
+              if char != None {
+                state.input = &state.input[1..];
+              }
+              let char = match char {
+                Some(x) if io_format == IoFormat::Char && x.is_ascii_whitespace() => continue,
+                Some(x) => x,
+                None => continue,
+              };
+              char.reverse_bits()
+            }
+            IoKind::Output => 0,
+          };
           'search: for x in state.grid.region.x_min..=state.grid.region.x_max {
             for y in state.grid.region.y_min..=state.grid.region.y_max {
               if cell_count_remaining == 0 {
@@ -128,8 +132,8 @@ pub fn step_program(state: &mut ProgramState, pause_on_replace: bool) -> StepPro
           }
           if io_kind == IoKind::Output {
             state.output.push(n);
-          } else {
-            state.input = &state.input[1..]
+          } else if pause_on_replace {
+            return StepProgramResult::ReplaceSuccess;
           }
         }
       }

@@ -132,7 +132,7 @@ pauseButton.addEventListener("click", () => {
 speedInput.addEventListener("blur", () => {
   let newSpeed = +speedInput.textContent!
   if(isNaN(newSpeed)) newSpeed = speed
-  if(newSpeed < 10) newSpeed = 10
+  if(newSpeed < 5) newSpeed = 5
   speed = newSpeed
   speedInput.textContent = speed + ""
   clearTimeout(timeout)
@@ -150,7 +150,7 @@ function run(){
   if(!paused) {
     let r = step()
     if(r !== null)
-      timeout = setTimeout(run, r ? Math.max(500, speed) : speed)
+      timeout = setTimeout(run, speed * 2)
   }
 }
 
@@ -186,7 +186,7 @@ function tick(){
   if(canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
     renderer.setSize(window.innerWidth, window.innerHeight)
     camera.aspect = window.innerWidth / window.innerHeight
-    camera.setViewOffset(window.innerWidth * 4 / 3, window.innerHeight, 0, 0, window.innerWidth, window.innerHeight)
+    camera.setViewOffset(window.innerWidth + 500, window.innerHeight, 0, 0, window.innerWidth, window.innerHeight)
     camera.updateProjectionMatrix()
   }
   trackballControls.update()
