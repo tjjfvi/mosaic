@@ -125,10 +125,8 @@ let speed = 100
 pauseButton.addEventListener("click", () => {
   paused = !paused
   pauseButton.textContent = paused ? "Play" : "Pause"
-  if(!paused) {
-    clearTimeout(timeout)
+  if(!paused)
     run()
-  }
 })
 
 speedInput.addEventListener("blur", () => {
@@ -137,7 +135,6 @@ speedInput.addEventListener("blur", () => {
   if(newSpeed < 5) newSpeed = 5
   speed = newSpeed
   speedInput.textContent = speed + ""
-  clearTimeout(timeout)
   run()
 })
 
@@ -149,6 +146,7 @@ speedBox.addEventListener("click", () => {
 
 let timeout: number | undefined
 function run(){
+  clearTimeout(timeout)
   if(!paused) {
     let t = Date.now()
     let r = step()
