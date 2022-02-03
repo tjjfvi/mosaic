@@ -24,8 +24,7 @@ const pauseButton = document.getElementById("pause")!
 const input = document.getElementById("input") as HTMLTextAreaElement
 const output = document.getElementById("output") as HTMLTextAreaElement
 
-code.value = examples.cgol[1]
-input.value = examples.cgol[2]!
+code.value = examples.logo[1]
 
 const examplesBox = document.getElementById("examples")!
 for(let id in examples) {
