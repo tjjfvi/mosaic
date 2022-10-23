@@ -17,6 +17,7 @@
       margin: 0;
       font-family: Inconsolata, monospace;
       color: white;
+      overflow: hidden;
     }
 
     #sidebar {
@@ -72,6 +73,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      flex: 1 0 0;
     }
 
     #examples span {
@@ -101,6 +103,23 @@
       font-family: Inconsolata, monospace;
       color: white;
       padding: 10px;
+    }
+
+    #footer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 50px;
+      opacity: .7;
+    }
+
+    #footer > span {
+      font-style: italic;
+    }
+
+    #footer > a {
+      color: inherit;
     }
 
     #error {
@@ -185,6 +204,10 @@
       <textarea id="input"></textarea>
       <span>Output</span>
       <textarea id="output" disabled></textarea>
+    </div>
+    <div id="footer">
+      <span>drag to pan & scroll to zoom</span>
+      <a href="https://github.com/tjjfvi/mosaic">https://github.com/tjjfvi/mosaic</a>
     </div>
     <div id="error"></div>
     <div id="controls">

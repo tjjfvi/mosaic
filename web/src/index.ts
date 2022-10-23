@@ -128,6 +128,10 @@ pauseButton.addEventListener("click", () => {
     run()
 })
 
+speedInput.addEventListener("keypress", e => {
+  if(e.key === "Enter") speedInput.blur()
+})
+
 speedInput.addEventListener("blur", () => {
   let newSpeed = +speedInput.textContent!
   if(isNaN(newSpeed)) newSpeed = speed
